@@ -99,10 +99,8 @@ fn main() {
 
     generer_obstacles_ressources(&mut carte, seed);
 
-     // Vérifiez que la base a été générée
      if !carte.base.is_empty() {
-        // Récupération des coordonnées de la base
-        let (base_x, base_y) = carte.base[0];  // Assumons que la base est toujours au premier index
+        let (base_x, base_y) = carte.base[0]; 
 
         // Génération des robots
         let nombres_robots = 5;
@@ -117,7 +115,7 @@ fn main() {
                     TypeRobot::Explorateur 
                 },
                 vitesse: 1,
-                position_x: base_x,  // Place les robots dans la base
+                position_x: base_x, 
                 position_y: base_y,
             });
         }
