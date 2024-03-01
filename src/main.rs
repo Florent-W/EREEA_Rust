@@ -1,6 +1,7 @@
 extern crate noise;
 use noise::{NoiseFn, Perlin, Seedable};
 use rand::Rng;
+use std::{thread, time};
 
 #[derive(PartialEq)]
 enum Ressource {
@@ -48,7 +49,7 @@ fn generer_obstacles_ressources(carte: &mut Carte, seed: u32) {
         for j in 0..carte.largeur {
             let noise_value = perlin.get([(i as f64 * 0.1), (j as f64 * 0.1)]);
             let noise_normaliser = (noise_value + 1.0) / 2.0; // Normalise la valeur entre 0 et 1
-            print!("{}", noise_normaliser);
+           // print!("{}", noise_normaliser);
 
             if noise_normaliser > 0.8 { // Noise pour les obstacles
                 carte.obstacles.push(Obstacle { id: obstacle_id, x: j, y: i });
@@ -80,32 +81,38 @@ fn main() {
         ressources: Vec::new()
     };
 
+    let duree_tick = time::Duration::from_millis(20000);
+
     let mut rng = rand::thread_rng();
     let seed: u32 = rng.gen(); // Génération du seed
 
-    generer_obstacles_ressources(&mut carte, seed);
-
-    print!("seed {}", seed);
-
-    // Affichage de la carte avec les contours
-    for i in 0..carte.hauteur {
-        for j in 0..carte.largeur {
-            if i == 0 || i == carte.hauteur - 1 { 
-                print!("-");
-            } else if j == 0 || j == carte.largeur - 1 { 
-                print!("|");
-            } else if carte.obstacles.iter().any(|&Obstacle { x, y, .. }| x == j && y == i) {
-                print!("O"); // obstacle
-            } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Energie) {
-                print!("E"); // Energie
-            } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Mineral) {
-                print!("M"); // Mineral
-            } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::LieuInteretScientifique) {
-                print!("L"); // Lieu d'Intérêt Scientifique
-            } else {
-                print!(" "); // Espace vide
+    println!("seed {}", seed);
+    
+    loop {
+        // Logique de mise à jour de vos robots et autres éléments ici
+        generer_obstacles_ressources(&mut carte, seed);
+        
+        // Affichage de la carte avec les contours
+        for i in 0..carte.hauteur {
+            for j in 0..carte.largeur {
+                if i == 0 || i == carte.hauteur - 1 { 
+                    print!("-");
+                } else if j == 0 || j == carte.largeur - 1 { 
+                    print!("|");
+                } else if carte.obstacles.iter().any(|&Obstacle { x, y, .. }| x == j && y == i) {
+                    print!("O"); // obstacle
+                } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Energie) {
+                    print!("E"); // Energie
+                } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Mineral) {
+                    print!("M"); // Mineral
+                } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::LieuInteretScientifique) {
+                    print!("L"); // Lieu d'Intérêt Scientifique
+                } else {
+                    print!(" "); // Espace vide
+                }
             }
+            println!();
         }
-        println!();
+        thread::sleep(duree_tick); // Attend avant le prochain tick
     }
 }
