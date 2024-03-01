@@ -35,7 +35,9 @@ struct Robot {
     nom: String,
     pv_max: i32,
     type_robot: TypeRobot,
-    vitesse: i32
+    vitesse: i32,
+    position_x: i32,
+    position_y: i32
 }
 
 struct Obstacle {
@@ -79,14 +81,6 @@ fn generer_obstacles_ressources(carte: &mut Carte, seed: u32) {
 }
 
 fn main() {
-    let robot1 = Robot {
-        id: 1,
-        nom: String::from("Robot1"),
-        pv_max: 100,
-        type_robot: TypeRobot::Explorateur,
-        vitesse: 0
-    };
-
     let mut carte: Carte = Carte {
         largeur: 20,
         hauteur: 20,
@@ -96,31 +90,43 @@ fn main() {
         base: Vec::new()
     };
 
-    let nombres_robots = 5; 
-    for id in 1..=nombres_robots {
-        carte.robots.push(Robot {
-            id,
-            nom: format!("Robot{}", id),
-            pv_max: 100,
-            type_robot: if id % 2 == 0 { 
-                TypeRobot::Collecteur 
-            } else { 
-                TypeRobot::Explorateur 
-            }, 
-            vitesse: 1,
-        });
-    }
-
     let duree_tick = time::Duration::from_millis(20000);
 
     let mut rng = rand::thread_rng();
     let seed: u32 = rng.gen(); // Génération du seed
 
     println!("seed {}", seed);
+
+    generer_obstacles_ressources(&mut carte, seed);
+
+     // Vérifiez que la base a été générée
+     if !carte.base.is_empty() {
+        // Récupération des coordonnées de la base
+        let (base_x, base_y) = carte.base[0];  // Assumons que la base est toujours au premier index
+
+        // Génération des robots
+        let nombres_robots = 5;
+        for id in 1..=nombres_robots {
+            carte.robots.push(Robot {
+                id,
+                nom: format!("Robot{}", id),
+                pv_max: 100,
+                type_robot: if id % 2 == 0 { 
+                    TypeRobot::Collecteur 
+                } else { 
+                    TypeRobot::Explorateur 
+                },
+                vitesse: 1,
+                position_x: base_x,  // Place les robots dans la base
+                position_y: base_y,
+            });
+        }
+    } else {
+        println!("Erreur : Aucune base n'a été générée.");
+        return;
+    }
     
-    loop {
-        generer_obstacles_ressources(&mut carte, seed);
-        
+    loop {        
         // Affichage de la carte avec les contours
         for i in 0..carte.hauteur {
             for j in 0..carte.largeur {
