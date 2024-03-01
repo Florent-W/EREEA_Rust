@@ -2,6 +2,7 @@ extern crate noise;
 use noise::{NoiseFn, Perlin, Seedable};
 use rand::Rng;
 
+#[derive(PartialEq)]
 enum Ressource {
     Energie,
     Mineral,
@@ -52,8 +53,12 @@ fn generer_obstacles_ressources(carte: &mut Carte, seed: u32) {
             if noise_normaliser > 0.8 { // Noise pour les obstacles
                 carte.obstacles.push(Obstacle { id: obstacle_id, x: j, y: i });
                 obstacle_id += 1;
-            } else if noise_normaliser > 0.7 { // Noise pour les ressources
+            } else if noise_normaliser > 0.75 { // Noise pour les ressources
                 carte.ressources.push((Ressource::Energie, j, i)); 
+            } else if noise_normaliser > 0.72 { 
+                carte.ressources.push((Ressource::Mineral, j, i)); 
+            } else if noise_normaliser > 0.7 { 
+                carte.ressources.push((Ressource::LieuInteretScientifique, j, i)); 
             }
         }
     }
@@ -89,10 +94,14 @@ fn main() {
                 print!("-");
             } else if j == 0 || j == carte.largeur - 1 { 
                 print!("|");
-            } else if carte.obstacles.iter().any(|obstacle| obstacle.x == j && obstacle.y == i) {
+            } else if carte.obstacles.iter().any(|&Obstacle { x, y, .. }| x == j && y == i) {
                 print!("O"); // obstacle
-            } else if carte.ressources.iter().any(|&(_, x, y)| x == j && y == i) {
-                print!("R"); // ressource
+            } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Energie) {
+                print!("E"); // Energie
+            } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Mineral) {
+                print!("M"); // Mineral
+            } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::LieuInteretScientifique) {
+                print!("L"); // Lieu d'Intérêt Scientifique
             } else {
                 print!(" "); // Espace vide
             }
