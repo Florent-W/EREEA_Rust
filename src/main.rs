@@ -5,10 +5,11 @@ use rand::Rng;
 use std::f32::consts::PI;
 
 const ENERGIE_SPRITE: &str = "textures/energie.png";
-const MINERAL_SPRITE: &str = "textures/minerai.png"; // Assurez-vous que c'est le bon chemin de fichier
+const MINERAL_SPRITE: &str = "textures/minerai.png";
 const LIEU_INTERET_SPRITE: &str = "textures/lieu.png";
 const BASE_SPRITE: &str = "textures/base.png";
 const ROBOT_SPRITE: &str = "textures/robot.png";
+const OBSTACLE_SPRITE: &str = "textures/obstacle.png";
 
 #[derive(Component, PartialEq, Debug)]
 enum Ressource {
@@ -23,7 +24,7 @@ struct Carte {
     hauteur: usize,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, PartialEq, Debug)]
 enum TypeRobot {
     Explorateur,
     Collecteur,
@@ -84,6 +85,7 @@ fn setup_map(
     let mineral_texture_handle = asset_server.load(MINERAL_SPRITE);
     let lieu_interet_texture_handle = asset_server.load(LIEU_INTERET_SPRITE);
     let base_handle = asset_server.load(BASE_SPRITE);
+    let obstacle_handle = asset_server.load(OBSTACLE_SPRITE); // Assurez-vous que c'est le bon chemin de fichier
 
     // Définir les dimensions de la carte
     let largeur = 50;
@@ -95,16 +97,24 @@ fn setup_map(
     let seed = rand::thread_rng().gen();
     let perlin = Perlin::new(seed);
 
-    // Génératio des éléments de la carte en fonction de la valeur du noise
+    // Génération des éléments de la carte en fonction de la valeur du noise
     for y in 0..hauteur {
         for x in 0..largeur {
             let position = Position { x: x as i32, y: y as i32 };
             let noise_value = perlin.get([x as f64 * 0.1, y as f64 * 0.1]);
             let noise_normalised = (noise_value + 1.0) / 2.0;
 
+            // Générer un obstacle si la valeur du bruit est supérieure à 0.6
             if noise_normalised > 0.8 {
-                commands.spawn((Obstacle { id: rand::thread_rng().gen() }, position));
+                commands.spawn(SpriteBundle {
+                    texture: obstacle_handle.clone(),
+                    transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
+                                   .with_scale(Vec3::splat(0.00038)),
+                        ..Default::default()
+                }).insert(Obstacle { id: rand::thread_rng().gen() })
+                .insert(position);
             } else {
+                // Déterminer quel type de ressource générer en fonction de la valeur du bruit
                 let sprite = match noise_normalised {
                     n if n > 0.75 => Some((Ressource::Energie, energie_texture_handle.clone())),
                     n if n > 0.72 => Some((Ressource::Mineral, mineral_texture_handle.clone())),
@@ -120,7 +130,7 @@ fn setup_map(
                         ..Default::default()
                     })
                     .insert(ressource)
-                    .insert(position); 
+                    .insert(position);
                 }
             }
         }
@@ -196,10 +206,22 @@ fn spawn_robots(
 ) {
     let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
 
-    if let Some((carte, position_carte)) = query.iter().next() {
+    if let Some((carte, _)) = query.iter().next() {
         for id in 1..=5 {
-            let robot_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32 + position_carte.x;
-            let robot_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32 + position_carte.y;
+            let robot_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32;
+            let robot_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
+
+            let type_robot = match id % 3 {
+                0 => TypeRobot::Explorateur,
+                1 => TypeRobot::Collecteur,
+                _ => TypeRobot::Visiteur,
+            };
+
+            let robot_name = match type_robot {
+                TypeRobot::Explorateur => format!("Explorateur{}", id),
+                TypeRobot::Collecteur => format!("Collecteur{}", id),
+                TypeRobot::Visiteur => format!("Visiteur{}", id),
+            };
 
             commands.spawn(SpriteBundle {
                 texture: robot_texture_handle.clone(),
@@ -207,11 +229,11 @@ fn spawn_robots(
                            .with_scale(Vec3::splat(0.003)),
                 ..Default::default()
             }).insert(Robot {
-                id,
-                nom: format!("Robot{}", id),
+                id: id,
+                nom: robot_name,
                 pv_max: 100,
-                type_robot: if id % 2 == 0 { TypeRobot::Collecteur } else { TypeRobot::Explorateur },
-                vitesse: 1,
+                type_robot: type_robot,
+                vitesse: 1
             }).insert(Position { x: robot_x, y: robot_y });
         }
     }
@@ -227,6 +249,8 @@ fn collect_resources_system(
 ) {
     println!("Resources available: {}", resource_query.iter().count()); 
     for (robot_entity, mut robot, robot_position) in robot_query.iter_mut() {
+        println!("{:?}", robot.type_robot);
+        if robot.type_robot == TypeRobot::Collecteur {
         println!("Checking robot {} at position {:?}", robot.nom, robot_position); 
         let mut resource_collected = false; 
         for (resource_entity, resource, resource_position) in resource_query.iter() {
@@ -248,6 +272,7 @@ fn collect_resources_system(
         }
         if !resource_collected {
             println!("Robot {} did not collect any resources at position {:?}", robot.nom, robot_position); 
+        }
         }
     }
 }
@@ -336,7 +361,13 @@ fn move_robots_on_map_system(
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+              title: "Essaim de Robots pour Exploration et Etude Astrobiologique".to_string(),
+              ..default()
+            }),
+            ..default()
+          }))
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_map)
