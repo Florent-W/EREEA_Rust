@@ -1,153 +1,350 @@
 extern crate noise;
+use bevy::{input::mouse::MouseWheel, prelude::*};
 use noise::{NoiseFn, Perlin, Seedable};
 use rand::Rng;
-use std::{thread, time};
+use std::f32::consts::PI;
 
-#[derive(PartialEq)]
+const ENERGIE_SPRITE: &str = "textures/energie.png";
+const MINERAL_SPRITE: &str = "textures/minerai.png"; // Assurez-vous que c'est le bon chemin de fichier
+const LIEU_INTERET_SPRITE: &str = "textures/lieu.png";
+const BASE_SPRITE: &str = "textures/base.png";
+const ROBOT_SPRITE: &str = "textures/robot.png";
+
+#[derive(Component, PartialEq, Debug)]
 enum Ressource {
     Energie,
     Mineral,
     LieuInteretScientifique,
 }
 
+#[derive(Component, Debug)]
 struct Carte {
     largeur: usize,
     hauteur: usize,
-    obstacles: Vec<Obstacle>,
-    ressources: Vec<(Ressource, usize, usize)>,
-    robots: Vec<Robot>,
-    base: Vec<(i32, i32)>
 }
 
+#[derive(Component, Debug)]
 enum TypeRobot {
     Explorateur,
     Collecteur,
     Visiteur,
 }
 
-struct Module {
-    nom_module: String,
-    partie: String
-}
-
+#[derive(Component, Debug)]
 struct Robot {
     id: i32,
     nom: String,
     pv_max: i32,
     type_robot: TypeRobot,
     vitesse: i32,
-    position_x: i32,
-    position_y: i32
 }
 
+#[derive(Component, PartialEq, Debug)]
+struct Position {
+    x: i32,
+    y: i32,
+}
+
+#[derive(Component, Debug)]
 struct Obstacle {
     id: i32,
-    x: usize,
-    y: usize
 }
 
-fn generer_obstacles_ressources(carte: &mut Carte, seed: u32) {
-    let perlin = Perlin::new(seed); 
-    let mut rng = rand::thread_rng();
+#[derive(Component, Debug)]
+struct Bordure;
 
-    carte.obstacles.clear();
-    carte.ressources.clear();
-    carte.base.clear();
+#[derive(Component, Debug)]
+struct Base;
 
-    let base_x = rng.gen_range(0..carte.largeur);
-    let base_y = rng.gen_range(0..carte.hauteur);
-    carte.base.push((base_x as i32, base_y as i32));
+/***
+ * Fonction pour la caméra
+ */
+fn setup_camera(mut commands: Commands) {
+    let zoom_level = 0.05; 
+    let map_center_x = 10.0; 
+    let map_center_y = 10.0; 
 
-    for i in 0..carte.hauteur {
-        for j in 0..carte.largeur {
-            if carte.base.iter().any(|&(bx, by)| bx as usize == j && by as usize == i) {
-                continue;
+    commands.spawn(Camera2dBundle {
+        transform: Transform::from_xyz(map_center_x, map_center_y, 10.0)
+                   .with_scale(Vec3::new(zoom_level, zoom_level, 1.0)),
+        ..default()
+    });
+    commands.insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5))); // Définit la couleur de fond à gris    
+}
+
+/***
+ * Fonction pour charger la map
+ */
+fn setup_map(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    // Charger les textures pour les différents éléments de la carte
+    let energie_texture_handle = asset_server.load(ENERGIE_SPRITE);
+    let mineral_texture_handle = asset_server.load(MINERAL_SPRITE);
+    let lieu_interet_texture_handle = asset_server.load(LIEU_INTERET_SPRITE);
+    let base_handle = asset_server.load(BASE_SPRITE);
+
+    // Définir les dimensions de la carte
+    let largeur = 50;
+    let hauteur = 50;
+
+    // Créer l'entité de la carte avec sa position de base
+    commands.spawn((Carte { largeur, hauteur }, Position { x: 0, y: 0 }));
+
+    let seed = rand::thread_rng().gen();
+    let perlin = Perlin::new(seed);
+
+    // Génératio des éléments de la carte en fonction de la valeur du noise
+    for y in 0..hauteur {
+        for x in 0..largeur {
+            let position = Position { x: x as i32, y: y as i32 };
+            let noise_value = perlin.get([x as f64 * 0.1, y as f64 * 0.1]);
+            let noise_normalised = (noise_value + 1.0) / 2.0;
+
+            if noise_normalised > 0.8 {
+                commands.spawn((Obstacle { id: rand::thread_rng().gen() }, position));
+            } else {
+                let sprite = match noise_normalised {
+                    n if n > 0.75 => Some((Ressource::Energie, energie_texture_handle.clone())),
+                    n if n > 0.72 => Some((Ressource::Mineral, mineral_texture_handle.clone())),
+                    n if n > 0.7 => Some((Ressource::LieuInteretScientifique, lieu_interet_texture_handle.clone())),
+                    _ => None,
+                };
+
+                if let Some((ressource, texture_handle)) = sprite {
+                    commands.spawn(SpriteBundle {
+                        texture: texture_handle,
+                        transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
+                                   .with_scale(Vec3::splat(0.00038)),
+                        ..Default::default()
+                    })
+                    .insert(ressource)
+                    .insert(position); 
+                }
             }
+        }
+    }
 
-            let noise_value = perlin.get([(i as f64 * 0.1), (j as f64 * 0.1)]);
-            let noise_normaliser = (noise_value + 1.0) / 2.0; 
+    // Ajout de la base sur la carte
+    let base_x = rand::thread_rng().gen_range(0..largeur) as i32;
+    let base_y = rand::thread_rng().gen_range(0..hauteur) as i32;
+    commands.spawn(SpriteBundle {
+        texture: base_handle,
+        transform: Transform::from_translation(Vec3::new(base_x as f32, base_y as f32, 0.0))
+                   .with_scale(Vec3::splat(0.002)),
+        ..Default::default()
+    })
+    .insert(Base)
+    .insert(Position { x: base_x, y: base_y }); 
+}
 
-            if noise_normaliser > 0.8 {
-                carte.obstacles.push(Obstacle { id: rng.gen(), x: j, y: i });
-            } else if noise_normaliser > 0.75 {
-                carte.ressources.push((Ressource::Energie, j, i)); 
-            } else if noise_normaliser > 0.72 {
-                carte.ressources.push((Ressource::Mineral, j, i)); 
-            } else if noise_normaliser > 0.7 {
-                carte.ressources.push((Ressource::LieuInteretScientifique, j, i)); 
+/***
+ * Fonction pour ajouter les bordures
+ */
+fn setup_bordures(
+    mut commands: Commands,
+    query: Query<(&Carte, &Position)>,
+) {
+    for (carte, carte_position) in query.iter() {
+        let bordure_couleur = Color::BLACK; 
+        let epaisseur_bordure = 0.05; 
+        let taille_case = 1.0; 
+        println!("{}", carte.hauteur);
+        for y in 0..carte.hauteur {
+            for x in 0..carte.largeur {
+                let x_pos = x as f32 + carte_position.x as f32 * taille_case;
+                let y_pos = y as f32 + carte_position.y as f32 * taille_case;
+
+                // Créer les bordures verticales
+                if x < carte.largeur - 1 {
+                    commands.spawn(SpriteBundle {
+                        sprite: Sprite {
+                            color: bordure_couleur,
+                            custom_size: Some(Vec2::new(epaisseur_bordure, taille_case)),
+                            ..Default::default()
+                        },
+                        transform: Transform::from_xyz(x_pos + 0.5 * taille_case, y_pos, 2.0), 
+                        ..Default::default()
+                    });
+                }
+
+                // Créer les bordures horizontales
+                if y < carte.hauteur - 1 {
+                    commands.spawn(SpriteBundle {
+                        sprite: Sprite {
+                            color: bordure_couleur,
+                            custom_size: Some(Vec2::new(taille_case, epaisseur_bordure)),
+                            ..Default::default()
+                        },
+                        transform: Transform::from_xyz(x_pos, y_pos + 0.5 * taille_case, 2.0), // Ajustez le Z pour s'assurer qu'il est visible
+                        ..Default::default()
+                    });
+                }
             }
         }
     }
 }
 
-fn main() {
-    let mut carte: Carte = Carte {
-        largeur: 20,
-        hauteur: 20,
-        obstacles: Vec::new(),
-        ressources: Vec::new(),
-        robots: Vec::new(),
-        base: Vec::new()
-    };
+/***
+ * Fonction d'ajout des robots sur la carte
+ */
+fn spawn_robots(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<(&Carte, &Position)>
+) {
+    let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
 
-    let duree_tick = time::Duration::from_millis(20000);
+    if let Some((carte, position_carte)) = query.iter().next() {
+        for id in 1..=5 {
+            let robot_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32 + position_carte.x;
+            let robot_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32 + position_carte.y;
 
-    let mut rng = rand::thread_rng();
-    let seed: u32 = rng.gen(); // Génération du seed
-
-    println!("seed {}", seed);
-
-    generer_obstacles_ressources(&mut carte, seed);
-
-     if !carte.base.is_empty() {
-        let (base_x, base_y) = carte.base[0]; 
-
-        // Génération des robots
-        let nombres_robots = 5;
-        for id in 1..=nombres_robots {
-            carte.robots.push(Robot {
+            commands.spawn(SpriteBundle {
+                texture: robot_texture_handle.clone(),
+                transform: Transform::from_translation(Vec3::new(robot_x as f32, robot_y as f32, 1.0))
+                           .with_scale(Vec3::splat(0.003)),
+                ..Default::default()
+            }).insert(Robot {
                 id,
                 nom: format!("Robot{}", id),
                 pv_max: 100,
-                type_robot: if id % 2 == 0 { 
-                    TypeRobot::Collecteur 
-                } else { 
-                    TypeRobot::Explorateur 
-                },
+                type_robot: if id % 2 == 0 { TypeRobot::Collecteur } else { TypeRobot::Explorateur },
                 vitesse: 1,
-                position_x: base_x, 
-                position_y: base_y,
-            });
+            }).insert(Position { x: robot_x, y: robot_y });
         }
-    } else {
-        println!("Erreur : Aucune base n'a été générée.");
+    }
+}
+
+/***
+ * Fonction de collecte des ressources si un robot est sur la même position qu'une ressource
+ */
+fn collect_resources_system(
+    mut commands: Commands,
+    mut robot_query: Query<(Entity, &mut Robot, &Position)>,
+    resource_query: Query<(Entity, &Ressource, &Position)>,
+) {
+    println!("Resources available: {}", resource_query.iter().count()); 
+    for (robot_entity, mut robot, robot_position) in robot_query.iter_mut() {
+        println!("Checking robot {} at position {:?}", robot.nom, robot_position); 
+        let mut resource_collected = false; 
+        for (resource_entity, resource, resource_position) in resource_query.iter() {
+            if robot_position == resource_position {
+                resource_collected = true; // La ressource a été trouvée à la même position que le robot
+                match resource {
+                    Ressource::Energie => {
+                        println!("Robot {} collected energy at position {:?}", robot.nom, robot_position);
+                    },
+                    Ressource::Mineral => {
+                        println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position); 
+                    },
+                    Ressource::LieuInteretScientifique => {
+                        println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position); 
+                    },
+                }
+                commands.entity(resource_entity).despawn();
+            }
+        }
+        if !resource_collected {
+            println!("Robot {} did not collect any resources at position {:?}", robot.nom, robot_position); 
+        }
+    }
+}
+
+/***
+ * Fonction pour déplacer la caméra avec les touches directionnelles
+ */
+fn move_camera_system(
+    time: Res<Time>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut query: Query<&mut Transform, With<Camera2d>>,
+) {
+    let camera_speed = 10.0;
+
+    for mut transform in query.iter_mut() {
+        if keyboard_input.pressed(KeyCode::ArrowLeft) {
+            transform.translation.x -= camera_speed * time.delta_seconds();
+        }
+        if keyboard_input.pressed(KeyCode::ArrowRight) {
+            transform.translation.x += camera_speed * time.delta_seconds();
+        }
+        if keyboard_input.pressed(KeyCode::ArrowUp) {
+            transform.translation.y += camera_speed * time.delta_seconds();
+        }
+        if keyboard_input.pressed(KeyCode::ArrowDown) {
+            transform.translation.y -= camera_speed * time.delta_seconds();
+        }
+    }
+}
+
+/***
+ * Fonction pour faire un zoom avec la caméra
+ */
+fn zoom_camera_system(
+    mut mouse_wheel_events: EventReader<MouseWheel>,
+    mut query: Query<&mut Transform, With<Camera2d>>,
+) {
+    let mut zoom_change = 0.0;
+    for event in mouse_wheel_events.read() {
+        zoom_change += event.y * 0.01; 
+    }
+
+    if zoom_change != 0.0 {
+        for mut transform in query.iter_mut() {
+            transform.scale *= Vec3::new(1.0 + zoom_change, 1.0 + zoom_change, 1.0);
+            transform.scale = transform.scale.clamp(Vec3::splat(0.03), Vec3::splat(5.0));
+        }
+    }
+}
+
+/***
+ * Fonction pour déplacer les robots
+ */
+fn move_robots_on_map_system(
+    mut query: Query<(Entity, &mut Position, &mut Transform, &Robot)>,
+    carte_query: Query<&Carte>,
+    time: Res<Time>,
+    mut timer: Local<Timer>,
+) {
+    if timer.duration().as_secs_f32() == 0.0 {
+        *timer = Timer::from_seconds(1.0, TimerMode::Repeating);
+    }
+
+// On attend que le timer se finit avant de déplacer le robot
+    if !timer.tick(time.delta()).just_finished() {
         return;
     }
-    
-    loop {        
-        // Affichage de la carte avec les contours
-        for i in 0..carte.hauteur {
-            for j in 0..carte.largeur {
-                if i == 0 || i == carte.hauteur - 1 { 
-                    print!("-");
-                } else if j == 0 || j == carte.largeur - 1 { 
-                    print!("|");
-                } else if carte.base.iter().any(|&(base_x, base_y)| base_x == j as i32 && base_y == i as i32) {
-                    print!("B"); // Base
-                } else if carte.obstacles.iter().any(|&Obstacle { x, y, .. }| x == j && y == i) {
-                    print!("O"); // obstacle
-                } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Energie) {
-                    print!("E"); // Energie
-                } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::Mineral) {
-                    print!("M"); // Mineral
-                } else if carte.ressources.iter().any(|&(ref ressource, x, y)| x == j && y == i && *ressource == Ressource::LieuInteretScientifique) {
-                    print!("L"); // Lieu d'Intérêt Scientifique
-                } else {
-                    print!(" "); // Espace vide
-                }
-            }
-            println!();
+
+    let carte = carte_query.single(); 
+
+    for (entity, mut position, mut transform, _) in query.iter_mut() {
+        // Si le robot est dans la base, le laisser pour l'instant
+        if position.x == (carte.largeur / 2) as i32 && position.y == (carte.hauteur / 2) as i32 {
+            continue; 
         }
-        thread::sleep(duree_tick); 
+        
+        // Avancer le robot d'une case
+        position.x = (position.x + 1) % carte.largeur as i32;
+        position.y = (position.y + 1) % carte.hauteur as i32;
+        
+        transform.translation.x = position.x as f32;
+        transform.translation.y = position.y as f32;
     }
+}
+
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
+        .add_systems(Startup, setup_camera)
+        .add_systems(Startup, setup_map)
+        .add_systems(PostStartup, setup_bordures)
+        .add_systems(PostStartup, spawn_robots)
+        .add_systems(Update, move_robots_on_map_system)
+        .add_systems(Update, collect_resources_system)
+        .add_systems(Update, move_camera_system)
+        .add_systems(Update, zoom_camera_system)
+        .run();
 }
