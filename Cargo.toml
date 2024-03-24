@@ -1,5 +1,5 @@
 [package]
-name = "rust_erea"
+name = "essaim_de_robots_pour_exploration_et_etude_astrobiologique"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +9,7 @@ edition = "2021"
 bevy = "0.13.1"
 noise = "0.8"
 rand = "0.8.5"
+
+[[bin]]
+name = "essaim_de_robots_pour_exploration_et_etude_astrobiologique"
+path = "src/main.rs"

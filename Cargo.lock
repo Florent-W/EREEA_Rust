@@ -1601,6 +1601,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "essaim_de_robots_pour_exploration_et_etude_astrobiologique"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "noise",
+ "rand 0.8.5",
+]
+
+[[package]]
 name = "euclid"
 version = "0.22.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2972,15 +2981,6 @@ dependencies = [
  "bitflags 2.5.0",
  "serde",
  "serde_derive",
-]
-
-[[package]]
-name = "rust_erea"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "noise",
- "rand 0.8.5",
 ]
 
 [[package]]
