@@ -8,6 +8,10 @@ const ENERGIE_SPRITE: &str = "textures/energie.png";
 const MINERAL_SPRITE: &str = "textures/minerai.png";
 const LIEU_INTERET_SPRITE: &str = "textures/lieu.png";
 const BASE_SPRITE: &str = "textures/base.png";
+const HERBE_SPRITE: &str = "textures/herbe.png";
+const TERRE_SPRITE: &str = "textures/terre.png";
+const SABLE_SPRITE: &str = "textures/sable.png";
+const EAU_SPRITE: &str = "textures/eau.png";
 const ROBOT_SPRITE: &str = "textures/robot.png";
 const OBSTACLE_SPRITE: &str = "textures/obstacle.png";
 
@@ -16,6 +20,10 @@ enum Ressource {
     Energie,
     Mineral,
     LieuInteretScientifique,
+    Herbe,
+    Terre,
+    Eau,
+    Sable
 }
 
 #[derive(Component, Debug)]
@@ -85,7 +93,11 @@ fn setup_map(
     let mineral_texture_handle = asset_server.load(MINERAL_SPRITE);
     let lieu_interet_texture_handle = asset_server.load(LIEU_INTERET_SPRITE);
     let base_handle = asset_server.load(BASE_SPRITE);
-    let obstacle_handle = asset_server.load(OBSTACLE_SPRITE); // Assurez-vous que c'est le bon chemin de fichier
+    let herbe_texture_handle = asset_server.load(HERBE_SPRITE);
+    let terre_texture_handle = asset_server.load(TERRE_SPRITE);
+    let sable_texture_handle = asset_server.load(SABLE_SPRITE);
+    let eau_texture_handle = asset_server.load(EAU_SPRITE);
+    let obstacle_handle = asset_server.load(OBSTACLE_SPRITE); 
 
     // Définir les dimensions de la carte
     let largeur = 50;
@@ -116,17 +128,21 @@ fn setup_map(
             } else {
                 // Déterminer quel type de ressource générer en fonction de la valeur du bruit
                 let sprite = match noise_normalised {
-                    n if n > 0.75 => Some((Ressource::Energie, energie_texture_handle.clone())),
-                    n if n > 0.72 => Some((Ressource::Mineral, mineral_texture_handle.clone())),
-                    n if n > 0.7 => Some((Ressource::LieuInteretScientifique, lieu_interet_texture_handle.clone())),
+                    n if n > 0.75 => Some((Ressource::Energie, energie_texture_handle.clone(), 0.00038)),
+                    n if n > 0.72 => Some((Ressource::Mineral, mineral_texture_handle.clone(), 0.00038)),
+                    n if n > 0.7 => Some((Ressource::LieuInteretScientifique, lieu_interet_texture_handle.clone(), 0.00038)),
+                    n if n >= 0.6 => Some((Ressource::Herbe, herbe_texture_handle.clone(), 0.003)),
+                    n if n > 0.4 && n < 0.6 => Some((Ressource::Terre, terre_texture_handle.clone(), 0.002)),
+                    n if n > 0.2 && n <= 0.4 => Some((Ressource::Sable, sable_texture_handle.clone(), 0.0014)),
+                    n if n > 0.01 => Some((Ressource::Eau, eau_texture_handle.clone(), 0.00197)),
                     _ => None,
                 };
 
-                if let Some((ressource, texture_handle)) = sprite {
+                if let Some((ressource, texture_handle, taille)) = sprite {
                     commands.spawn(SpriteBundle {
                         texture: texture_handle,
                         transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
-                                   .with_scale(Vec3::splat(0.00038)),
+                                   .with_scale(Vec3::splat(taille)),
                         ..Default::default()
                     })
                     .insert(ressource)
@@ -211,10 +227,10 @@ fn spawn_robots(
             let robot_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32;
             let robot_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
 
-            let type_robot = match id % 3 {
-                0 => TypeRobot::Explorateur,
-                1 => TypeRobot::Collecteur,
-                _ => TypeRobot::Visiteur,
+            let (type_robot, color) = match id % 3 {
+                0 => (TypeRobot::Explorateur, Some(Color::rgb(0.0, 1.0, 0.0))),
+                1 => (TypeRobot::Collecteur, Some(Color::rgb(0.0, 0.0, 1.0))),
+                _ => (TypeRobot::Visiteur, None)
             };
 
             let robot_name = match type_robot {
@@ -225,6 +241,10 @@ fn spawn_robots(
 
             commands.spawn(SpriteBundle {
                 texture: robot_texture_handle.clone(),
+                sprite: Sprite {
+                    color: color.unwrap_or(Color::WHITE),
+                    ..Default::default()
+                },
                 transform: Transform::from_translation(Vec3::new(robot_x as f32, robot_y as f32, 1.0))
                            .with_scale(Vec3::splat(0.003)),
                 ..Default::default()
@@ -266,6 +286,8 @@ fn collect_resources_system(
                     Ressource::LieuInteretScientifique => {
                         println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position); 
                     },
+                    _ => {
+                    }
                 }
                 commands.entity(resource_entity).despawn();
             }
