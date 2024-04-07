@@ -16,14 +16,32 @@ const ROBOT_SPRITE: &str = "textures/robot.png";
 const OBSTACLE_SPRITE: &str = "textures/obstacle.png";
 
 #[derive(Component, PartialEq, Debug)]
+enum ElementMap {
+    Ressource(Ressource),
+    ElementGeographique(ElementGeographique)
+}
+
+#[derive(Component, Debug, PartialEq)]
 enum Ressource {
     Energie,
     Mineral,
     LieuInteretScientifique,
+    Obstacle
+}
+
+#[derive(Component, Debug, PartialEq)]
+enum ElementGeographique {
     Herbe,
     Terre,
     Eau,
     Sable
+}
+
+#[derive(Component, Debug, PartialEq)]
+enum EtatDecouverte {
+    NonDecouvert,
+    EnAttente,
+    Decouvert
 }
 
 #[derive(Component, Debug)]
@@ -46,17 +64,19 @@ struct Robot {
     pv_max: i32,
     type_robot: TypeRobot,
     vitesse: i32,
+    timer: f32
+}
+
+#[derive(Component, Debug)]
+struct ElementCarte {
+    element: ElementMap,
+    est_decouvert: EtatDecouverte,
 }
 
 #[derive(Component, PartialEq, Debug)]
 struct Position {
     x: i32,
     y: i32,
-}
-
-#[derive(Component, Debug)]
-struct Obstacle {
-    id: i32,
 }
 
 #[derive(Component, Debug)]
@@ -116,39 +136,32 @@ fn setup_map(
             let noise_value = perlin.get([x as f64 * 0.1, y as f64 * 0.1]);
             let noise_normalised = (noise_value + 1.0) / 2.0;
 
-            // Générer un obstacle si la valeur du bruit est supérieure à 0.6
-            if noise_normalised > 0.8 {
-                commands.spawn(SpriteBundle {
-                    texture: obstacle_handle.clone(),
-                    transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
-                                   .with_scale(Vec3::splat(0.00038)),
-                        ..Default::default()
-                }).insert(Obstacle { id: rand::thread_rng().gen() })
-                .insert(position);
-            } else {
                 // Déterminer quel type de ressource générer en fonction de la valeur du bruit
                 let sprite = match noise_normalised {
-                    n if n > 0.75 => Some((Ressource::Energie, energie_texture_handle.clone(), 0.00038)),
-                    n if n > 0.72 => Some((Ressource::Mineral, mineral_texture_handle.clone(), 0.00038)),
-                    n if n > 0.7 => Some((Ressource::LieuInteretScientifique, lieu_interet_texture_handle.clone(), 0.00038)),
-                    n if n >= 0.6 => Some((Ressource::Herbe, herbe_texture_handle.clone(), 0.003)),
-                    n if n > 0.4 && n < 0.6 => Some((Ressource::Terre, terre_texture_handle.clone(), 0.002)),
-                    n if n > 0.2 && n <= 0.4 => Some((Ressource::Sable, sable_texture_handle.clone(), 0.0014)),
-                    n if n > 0.01 => Some((Ressource::Eau, eau_texture_handle.clone(), 0.00197)),
+                    n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), obstacle_handle.clone(), 0.00038)),
+                    n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), energie_texture_handle.clone(), 0.00038)),
+                    n if n > 0.72 => Some((ElementMap::Ressource(Ressource::Mineral), mineral_texture_handle.clone(), 0.00038)),
+                    n if n > 0.7 => Some((ElementMap::Ressource(Ressource::LieuInteretScientifique), lieu_interet_texture_handle.clone(), 0.00038)),
+                    n if n >= 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Herbe), herbe_texture_handle.clone(), 0.003)),
+                    n if n > 0.4 && n < 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Terre), terre_texture_handle.clone(), 0.002)),
+                    n if n > 0.2 && n <= 0.4 => Some((ElementMap::ElementGeographique(ElementGeographique::Sable), sable_texture_handle.clone(), 0.0014)),
+                    n if n >= 0.0 => Some((ElementMap::ElementGeographique(ElementGeographique::Eau), eau_texture_handle.clone(), 0.00197)),
                     _ => None,
                 };
 
-                if let Some((ressource, texture_handle, taille)) = sprite {
+                if let Some((element, texture_handle, taille)) = sprite {
                     commands.spawn(SpriteBundle {
                         texture: texture_handle,
                         transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
                                    .with_scale(Vec3::splat(taille)),
                         ..Default::default()
                     })
-                    .insert(ressource)
+                    .insert(ElementCarte {
+                        element,
+                        est_decouvert: EtatDecouverte::NonDecouvert
+                    })
                     .insert(position);
                 }
-            }
         }
     }
 
@@ -227,10 +240,10 @@ fn spawn_robots(
             let robot_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32;
             let robot_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
 
-            let (type_robot, color) = match id % 3 {
-                0 => (TypeRobot::Explorateur, Some(Color::rgb(0.0, 1.0, 0.0))),
-                1 => (TypeRobot::Collecteur, Some(Color::rgb(0.0, 0.0, 1.0))),
-                _ => (TypeRobot::Visiteur, None)
+            let (type_robot, color, vitesse) = match id % 3 {
+                0 => (TypeRobot::Explorateur, Some(Color::rgb(0.0, 1.0, 0.0)), 2),
+                1 => (TypeRobot::Collecteur, Some(Color::rgb(0.0, 0.0, 1.0)), 1),
+                _ => (TypeRobot::Visiteur, None, 1)
             };
 
             let robot_name = match type_robot {
@@ -238,6 +251,8 @@ fn spawn_robots(
                 TypeRobot::Collecteur => format!("Collecteur{}", id),
                 TypeRobot::Visiteur => format!("Visiteur{}", id),
             };
+
+            let timer = 1.0 / vitesse as f32;
 
             commands.spawn(SpriteBundle {
                 texture: robot_texture_handle.clone(),
@@ -253,7 +268,8 @@ fn spawn_robots(
                 nom: robot_name,
                 pv_max: 100,
                 type_robot: type_robot,
-                vitesse: 1
+                vitesse: vitesse,
+                timer: timer
             }).insert(Position { x: robot_x, y: robot_y });
         }
     }
@@ -265,31 +281,34 @@ fn spawn_robots(
 fn collect_resources_system(
     mut commands: Commands,
     mut robot_query: Query<(Entity, &mut Robot, &Position)>,
-    resource_query: Query<(Entity, &Ressource, &Position)>,
+    mut element_carte_query: Query<(Entity, &mut ElementCarte, &Position)>,
 ) {
-    println!("Resources available: {}", resource_query.iter().count()); 
     for (robot_entity, mut robot, robot_position) in robot_query.iter_mut() {
         println!("{:?}", robot.type_robot);
         if robot.type_robot == TypeRobot::Collecteur {
         println!("Checking robot {} at position {:?}", robot.nom, robot_position); 
         let mut resource_collected = false; 
-        for (resource_entity, resource, resource_position) in resource_query.iter() {
+        for (entity, mut element_carte, resource_position) in element_carte_query.iter_mut() {
             if robot_position == resource_position {
                 resource_collected = true; // La ressource a été trouvée à la même position que le robot
-                match resource {
-                    Ressource::Energie => {
+                match element_carte.element {
+                    ElementMap::Ressource(Ressource::Energie) => {
                         println!("Robot {} collected energy at position {:?}", robot.nom, robot_position);
+                        commands.entity(entity).despawn();
                     },
-                    Ressource::Mineral => {
+                    ElementMap::Ressource(Ressource::Mineral) => {
                         println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position); 
+                        commands.entity(entity).despawn();
                     },
-                    Ressource::LieuInteretScientifique => {
+                    ElementMap::Ressource(Ressource::LieuInteretScientifique) => {
                         println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position); 
                     },
                     _ => {
                     }
                 }
-                commands.entity(resource_entity).despawn();
+                if(element_carte.est_decouvert == EtatDecouverte::NonDecouvert) {
+                    element_carte.est_decouvert = EtatDecouverte::EnAttente;
+                }
             }
         }
         if !resource_collected {
@@ -349,34 +368,28 @@ fn zoom_camera_system(
  * Fonction pour déplacer les robots
  */
 fn move_robots_on_map_system(
-    mut query: Query<(Entity, &mut Position, &mut Transform, &Robot)>,
+    mut query: Query<(Entity, &mut Position, &mut Transform, &mut Robot)>,
     carte_query: Query<&Carte>,
     time: Res<Time>,
-    mut timer: Local<Timer>,
 ) {
-    if timer.duration().as_secs_f32() == 0.0 {
-        *timer = Timer::from_seconds(1.0, TimerMode::Repeating);
-    }
+    let delta = time.delta_seconds();
+    let carte = carte_query.single();
 
-// On attend que le timer se finit avant de déplacer le robot
-    if !timer.tick(time.delta()).just_finished() {
-        return;
-    }
+    for (entity, mut position, mut transform, mut robot) in query.iter_mut() {
+        robot.timer -= delta;
 
-    let carte = carte_query.single(); 
+        // Vérifie si le timer du robot est terminé
+        if robot.timer <= 0.0 {
+            // Le timer est terminé, mouvement du robot
+            position.x = (position.x + 1) % carte.largeur as i32;
+            position.y = (position.y + 1) % carte.hauteur as i32;
+            
+            transform.translation.x = position.x as f32;
+            transform.translation.y = position.y as f32;
 
-    for (entity, mut position, mut transform, _) in query.iter_mut() {
-        // Si le robot est dans la base, le laisser pour l'instant
-        if position.x == (carte.largeur / 2) as i32 && position.y == (carte.hauteur / 2) as i32 {
-            continue; 
+            // Réinitialise le timer du robot basé sur sa vitesse
+            robot.timer = 1.0 / robot.vitesse as f32;
         }
-        
-        // Avancer le robot d'une case
-        position.x = (position.x + 1) % carte.largeur as i32;
-        position.y = (position.y + 1) % carte.hauteur as i32;
-        
-        transform.translation.x = position.x as f32;
-        transform.translation.y = position.y as f32;
     }
 }
 
