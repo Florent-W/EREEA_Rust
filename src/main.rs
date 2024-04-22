@@ -164,10 +164,10 @@ fn setup_map(
 
                 // Déterminer quel type de ressource générer en fonction de la valeur du bruit
                 let sprite = match noise_normalised {
-                    n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), obstacle_handle.clone(), 0.00038)),
-                    n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), energie_texture_handle.clone(), 0.00038)),
-                    n if n > 0.72 => Some((ElementMap::Ressource(Ressource::Mineral), mineral_texture_handle.clone(), 0.00038)),
-                    n if n > 0.7 => Some((ElementMap::Ressource(Ressource::LieuInteretScientifique), lieu_interet_texture_handle.clone(), 0.00038)),
+                    n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), obstacle_handle.clone(), 0.0015)),
+                    n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), energie_texture_handle.clone(), 0.0015)),
+                    n if n > 0.72 => Some((ElementMap::Ressource(Ressource::Mineral), mineral_texture_handle.clone(), 0.0012)),
+                    n if n > 0.7 => Some((ElementMap::Ressource(Ressource::LieuInteretScientifique), lieu_interet_texture_handle.clone(), 0.0015)),
                     n if n >= 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Herbe), herbe_texture_handle.clone(), 0.003)),
                     n if n > 0.4 && n < 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Terre), terre_texture_handle.clone(), 0.002)),
                     n if n > 0.2 && n <= 0.4 => Some((ElementMap::ElementGeographique(ElementGeographique::Sable), sable_texture_handle.clone(), 0.0014)),
