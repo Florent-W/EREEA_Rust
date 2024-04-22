@@ -1,4 +1,5 @@
 extern crate noise;
+
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use bevy::input::keyboard::KeyboardInput;
 use bevy::input::ButtonState;
@@ -273,15 +274,12 @@ fn setup_bordures(
 fn spawn_robots(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    query: Query<(&Carte, &Position)>
+    base_query: Query<(&Base, &Position)>
 ) {
     let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
 
-    if let Some((carte, _)) = query.iter().next() {
+    if let Some((_, base_position)) = base_query.iter().next() {
         for id in 1..=5 {
-            let robot_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32;
-            let robot_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
-
             let (type_robot, color, vitesse) = match id % 3 {
                 0 => (TypeRobot::Explorateur, Some(Color::rgb(0.0, 1.0, 0.0)), 2),
                 1 => (TypeRobot::Collecteur, Some(Color::rgb(0.0, 0.0, 1.0)), 1),
@@ -294,11 +292,11 @@ fn spawn_robots(
                 TypeRobot::Visiteur => format!("Visiteur{}", id),
             };
 
-            // Assign a random target position on the map
-            let target_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32;
-            let target_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
+            // Cible aléatoire sur la map pour les robots
+            let target_x: i32 = rand::thread_rng().gen_range(0..50) as i32; 
+            let target_y: i32 = rand::thread_rng().gen_range(0..50) as i32; 
 
-            let timer = 1.0 / vitesse as f32;
+            let timer = 5.0 / vitesse as f32;
 
             commands.spawn(SpriteBundle {
                 texture: robot_texture_handle.clone(),
@@ -306,7 +304,7 @@ fn spawn_robots(
                     color: color.unwrap_or(Color::WHITE),
                     ..Default::default()
                 },
-                transform: Transform::from_translation(Vec3::new(robot_x as f32, robot_y as f32, 1.0))
+                transform: Transform::from_translation(Vec3::new(base_position.x as f32, base_position.y as f32, 1.0))
                            .with_scale(Vec3::splat(0.003)),
                 ..Default::default()
             }).insert(Robot {
@@ -318,8 +316,8 @@ fn spawn_robots(
                 timer: timer,
                 target_position: Some(Position { x: target_x, y: target_y }),
                 steps_moved: 0 
-            }).insert(Position { x: robot_x, y: robot_y })
-            .insert(RobotState::Exploring);
+            }).insert(Position { x: base_position.x, y: base_position.y })
+            .insert(RobotState::AtBase);
         }
     }
 }
@@ -585,13 +583,15 @@ fn main() {
     let seed_option = request_seed_from_user();
 
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+        .add_plugins((DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
               title: "Essaim de Robots pour Exploration et Etude Astrobiologique".to_string(),
               ..default()
             }),
             ..default()
-          }))
+          },
+        )))
+
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(true))
         .insert_resource(SeedResource { seed: seed_option })
