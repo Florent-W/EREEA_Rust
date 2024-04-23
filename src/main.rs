@@ -1,7 +1,9 @@
 extern crate noise;
 
+use bevy::render::view::window;
+use bevy::window::WindowMode;
 use bevy::{input::mouse::MouseWheel, prelude::*};
-use bevy::input::keyboard::KeyboardInput;
+use bevy::input::keyboard::{self, KeyboardInput};
 use bevy::input::ButtonState;
 use noise::{NoiseFn, Perlin, Seedable};
 use rand::Rng;
@@ -94,7 +96,7 @@ struct ElementCarte {
     est_decouvert: EtatDecouverte,
 }
 
-#[derive(Component, PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug, Copy, Clone)]
 struct Position {
     x: i32,
     y: i32,
@@ -565,16 +567,48 @@ fn discover_elements(
 fn assign_targets(
     mut commands: Commands,
     mut query: Query<(&mut Robot, &Position)>,
-    map_query: Query<&Carte>, // Query Carte as a component
+    map_query: Query<&Carte>,
+    element_carte_query: Query<(&ElementCarte, &Position)>, // Query pour les informations des cases
 ) {
     if let Ok(carte) = map_query.get_single() {
         for (mut robot, robot_pos) in query.iter_mut() {
             if robot.type_robot == TypeRobot::Explorateur && robot.target_position.is_none() {
-                let target_x = rand::thread_rng().gen_range(0..carte.largeur) as i32;
-                let target_y = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
-                robot.target_position = Some(Position { x: target_x, y: target_y });
-                robot.steps_moved = 0; 
+                let mut target_position: Option<Position> = None;
+                let mut available_positions = Vec::new();
+
+                // Collecter toutes les positions non découvertes
+                for (element_carte, pos) in element_carte_query.iter() {
+                    if element_carte.est_decouvert == EtatDecouverte::NonDecouvert {
+                        available_positions.push(*pos);
+                    }
+                }
+
+                // Sélectionner aléatoirement une de ces positions disponibles
+                if !available_positions.is_empty() {
+                    let mut rng = rand::thread_rng();
+                    target_position = Some(available_positions[rng.gen_range(0..available_positions.len())]);
+                }
+
+                // Si une position valide est trouvée, l'assigner au robot
+                if let Some(pos) = target_position {
+                    robot.target_position = Some(pos);
+                    robot.steps_moved = 0;
+                }
             }
+        }
+    }
+}
+
+/***
+ * Fonction pour activer ou désactiver le plein écran
+ */
+fn toggle_fullscreen(input: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Window>) {
+    if input.just_pressed(KeyCode::F1) {
+        for mut window in windows.iter_mut() {
+            window.mode = match window.mode {
+                WindowMode::Windowed => WindowMode::BorderlessFullscreen,
+                _ => WindowMode::Windowed,
+            };
         }
     }
 }
@@ -586,14 +620,15 @@ fn main() {
         .add_plugins((DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
               title: "Essaim de Robots pour Exploration et Etude Astrobiologique".to_string(),
+              mode: WindowMode::Windowed,
+              resolution: (1280., 720.).into(),
               ..default()
             }),
             ..default()
           },
         )))
-
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
-        .insert_resource(AffichageCasesNonDecouvertes(true))
+        .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(SeedResource { seed: seed_option })
         .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_map)
@@ -601,11 +636,13 @@ fn main() {
         .add_systems(PostStartup, spawn_robots)
         .add_systems(Update, move_robots_on_map_system)
         .add_systems(Update, toggle_cases_non_decouvertes)
+        .add_systems(Update, toggle_fullscreen)
+        .add_systems(Update, assign_targets)
         .add_systems(Update, adjust_visibility_system)
-        .add_systems(PostUpdate, discover_elements)
         .add_systems(Update, update_robot_state)
         .add_systems(Update, collect_resources_system)
         .add_systems(Update, move_camera_system)
         .add_systems(Update, zoom_camera_system)
+        .add_systems(PostUpdate, discover_elements)
         .run();
 }
