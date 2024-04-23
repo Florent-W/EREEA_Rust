@@ -1,6 +1,9 @@
 extern crate noise;
+
+use bevy::render::view::window;
+use bevy::window::WindowMode;
 use bevy::{input::mouse::MouseWheel, prelude::*};
-use bevy::input::keyboard::KeyboardInput;
+use bevy::input::keyboard::{self, KeyboardInput};
 use bevy::input::ButtonState;
 use noise::{NoiseFn, Perlin, Seedable};
 use rand::Rng;
@@ -93,7 +96,7 @@ struct ElementCarte {
     est_decouvert: EtatDecouverte,
 }
 
-#[derive(Component, PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug, Copy, Clone)]
 struct Position {
     x: i32,
     y: i32,
@@ -273,15 +276,12 @@ fn setup_bordures(
 fn spawn_robots(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    query: Query<(&Carte, &Position)>
+    base_query: Query<(&Base, &Position)>
 ) {
     let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
 
-    if let Some((carte, _)) = query.iter().next() {
+    if let Some((_, base_position)) = base_query.iter().next() {
         for id in 1..=5 {
-            let robot_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32;
-            let robot_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
-
             let (type_robot, color, vitesse) = match id % 3 {
                 0 => (TypeRobot::Explorateur, Some(Color::rgb(0.0, 1.0, 0.0)), 2),
                 1 => (TypeRobot::Collecteur, Some(Color::rgb(0.0, 0.0, 1.0)), 1),
@@ -294,11 +294,11 @@ fn spawn_robots(
                 TypeRobot::Visiteur => format!("Visiteur{}", id),
             };
 
-            // Assign a random target position on the map
-            let target_x: i32 = rand::thread_rng().gen_range(0..carte.largeur) as i32;
-            let target_y: i32 = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
+            // Cible aléatoire sur la map pour les robots
+            let target_x: i32 = rand::thread_rng().gen_range(0..50) as i32; 
+            let target_y: i32 = rand::thread_rng().gen_range(0..50) as i32; 
 
-            let timer = 1.0 / vitesse as f32;
+            let timer = 5.0 / vitesse as f32;
 
             commands.spawn(SpriteBundle {
                 texture: robot_texture_handle.clone(),
@@ -306,7 +306,7 @@ fn spawn_robots(
                     color: color.unwrap_or(Color::WHITE),
                     ..Default::default()
                 },
-                transform: Transform::from_translation(Vec3::new(robot_x as f32, robot_y as f32, 1.0))
+                transform: Transform::from_translation(Vec3::new(base_position.x as f32, base_position.y as f32, 1.0))
                            .with_scale(Vec3::splat(0.003)),
                 ..Default::default()
             }).insert(Robot {
@@ -318,8 +318,8 @@ fn spawn_robots(
                 timer: timer,
                 target_position: Some(Position { x: target_x, y: target_y }),
                 steps_moved: 0 
-            }).insert(Position { x: robot_x, y: robot_y })
-            .insert(RobotState::Exploring);
+            }).insert(Position { x: base_position.x, y: base_position.y })
+            .insert(RobotState::AtBase);
         }
     }
 }
@@ -567,16 +567,48 @@ fn discover_elements(
 fn assign_targets(
     mut commands: Commands,
     mut query: Query<(&mut Robot, &Position)>,
-    map_query: Query<&Carte>, // Query Carte as a component
+    map_query: Query<&Carte>,
+    element_carte_query: Query<(&ElementCarte, &Position)>, // Query pour les informations des cases
 ) {
     if let Ok(carte) = map_query.get_single() {
         for (mut robot, robot_pos) in query.iter_mut() {
             if robot.type_robot == TypeRobot::Explorateur && robot.target_position.is_none() {
-                let target_x = rand::thread_rng().gen_range(0..carte.largeur) as i32;
-                let target_y = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
-                robot.target_position = Some(Position { x: target_x, y: target_y });
-                robot.steps_moved = 0; 
+                let mut target_position: Option<Position> = None;
+                let mut available_positions = Vec::new();
+
+                // Collecter toutes les positions non découvertes
+                for (element_carte, pos) in element_carte_query.iter() {
+                    if element_carte.est_decouvert == EtatDecouverte::NonDecouvert {
+                        available_positions.push(*pos);
+                    }
+                }
+
+                // Sélectionner aléatoirement une de ces positions disponibles
+                if !available_positions.is_empty() {
+                    let mut rng = rand::thread_rng();
+                    target_position = Some(available_positions[rng.gen_range(0..available_positions.len())]);
+                }
+
+                // Si une position valide est trouvée, l'assigner au robot
+                if let Some(pos) = target_position {
+                    robot.target_position = Some(pos);
+                    robot.steps_moved = 0;
+                }
             }
+        }
+    }
+}
+
+/***
+ * Fonction pour activer ou désactiver le plein écran
+ */
+fn toggle_fullscreen(input: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Window>) {
+    if input.just_pressed(KeyCode::F1) {
+        for mut window in windows.iter_mut() {
+            window.mode = match window.mode {
+                WindowMode::Windowed => WindowMode::BorderlessFullscreen,
+                _ => WindowMode::Windowed,
+            };
         }
     }
 }
@@ -585,15 +617,18 @@ fn main() {
     let seed_option = request_seed_from_user();
 
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+        .add_plugins((DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
               title: "Essaim de Robots pour Exploration et Etude Astrobiologique".to_string(),
+              mode: WindowMode::Windowed,
+              resolution: (1280., 720.).into(),
               ..default()
             }),
             ..default()
-          }))
+          },
+        )))
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
-        .insert_resource(AffichageCasesNonDecouvertes(true))
+        .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(SeedResource { seed: seed_option })
         .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_map)
@@ -601,11 +636,13 @@ fn main() {
         .add_systems(PostStartup, spawn_robots)
         .add_systems(Update, move_robots_on_map_system)
         .add_systems(Update, toggle_cases_non_decouvertes)
+        .add_systems(Update, toggle_fullscreen)
+        .add_systems(Update, assign_targets)
         .add_systems(Update, adjust_visibility_system)
-        .add_systems(PostUpdate, discover_elements)
         .add_systems(Update, update_robot_state)
         .add_systems(Update, collect_resources_system)
         .add_systems(Update, move_camera_system)
         .add_systems(Update, zoom_camera_system)
+        .add_systems(PostUpdate, discover_elements)
         .run();
 }
