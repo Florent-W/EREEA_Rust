@@ -111,18 +111,16 @@ struct Base;
 /***
  * Fonction pour la caméra
  */
-fn setup_camera(mut commands: Commands) {
+fn setup_camera(mut commands: Commands, center_x: f32, center_y: f32) {
     let zoom_level = 0.05; 
-    let map_center_x = 10.0; 
-    let map_center_y = 10.0; 
-
     commands.spawn(Camera2dBundle {
-        transform: Transform::from_xyz(map_center_x, map_center_y, 10.0)
+        transform: Transform::from_xyz(center_x, center_y, 10.0)
                    .with_scale(Vec3::new(zoom_level, zoom_level, 1.0)),
         ..default()
     });
     commands.insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5))); // Définit la couleur de fond à gris    
 }
+
 
 /***
  * Fonction pour charger la map
@@ -221,6 +219,10 @@ commands.spawn(SpriteBundle {
 })
 .insert(Base)
 .insert(Position { x: base_x, y: base_y });
+
+// Centre la caméra sur la base
+setup_camera(commands, base_x as f32, base_y as f32);
+
 }
 
 /***
@@ -641,7 +643,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(SeedResource { seed: seed_option })
-        .add_systems(Startup, setup_camera)
+        // .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_map)
         .add_systems(PostStartup, setup_bordures)
         .add_systems(PostStartup, spawn_robots)
