@@ -478,9 +478,11 @@ fn zoom_camera_system(
  * Fonction pour déplacer les robots
  */
 fn move_robots_on_map_system(
+    mut commands: Commands,
     mut query: Query<(Entity, &mut Position, &mut Transform, &mut Robot, &mut RobotState)>,
     carte_query: Query<&Carte>,
-    base_query: Query<(&Base, &Position), Without<Robot>>,
+    base_query: Query<(&Base, &Position), Without<Robot>>, // Exclure les Robots ici
+    element_carte_query: Query<(&ElementCarte, &Position), Without<Robot>>, // Exclure les Robots ici
     time: Res<Time>,
 ) {
     let delta = time.delta_seconds(); 
@@ -488,19 +490,32 @@ fn move_robots_on_map_system(
     let (_, base_pos) = base_query.single();  // Position de la base
 
     for (entity, mut position, mut transform, mut robot, mut state) in query.iter_mut() {
-        robot.timer -= delta;  // 
+        robot.timer -= delta; 
 
         match *state {
             RobotState::Exploring => {  
                 if robot.timer <= 0.0 {  
                     if let Some(target_position) = &robot.target_position { 
-                        if *position != *target_position && robot.steps_moved < 30 {  // Si la cible n'a pas été atteinte
-                            // Calculer la prochaine position
-                            position.x = (position.x + (target_position.x - position.x).signum()) % carte.largeur as i32;
-                            position.y = (position.y + (target_position.y - position.y).signum()) % carte.hauteur as i32;
-                            robot.steps_moved += 1;  
+                        if *position != *target_position && robot.steps_moved < 30 {  
+                            // Vérifie si la position suivante est un obstacle
+                            let next_x = (position.x + (target_position.x - position.x).signum()) % carte.largeur as i32;
+                            let next_y = (position.y + (target_position.y - position.y).signum()) % carte.hauteur as i32;
+                            let next_position = Position { x: next_x, y: next_y };
+
+                            if element_carte_query.iter().any(|(elem, pos)| *pos == next_position && matches!(elem.element, ElementMap::Ressource(Ressource::Obstacle))) {
+                                // Trouve une nouvelle direction aléatoire pour éviter l'obstacle
+                                robot.target_position = Some(Position { 
+                                    x: rand::thread_rng().gen_range(0..carte.largeur) as i32, 
+                                    y: rand::thread_rng().gen_range(0..carte.hauteur) as i32 
+                                });
+                            } else {
+                                // Déplace normalement si aucune obstacle n'est détecté
+                                position.x = next_x;
+                                position.y = next_y;
+                                robot.steps_moved += 1;
+                            }
                         } else {
-                            // Cible atteinte
+                            // Cible atteinte ou limite de déplacement atteinte
                             robot.target_position = None;
                             robot.steps_moved = 0;
                             *state = RobotState::Returning;
@@ -510,23 +525,21 @@ fn move_robots_on_map_system(
                 }
             },
             RobotState::Returning => {
+                // Logique pour le retour à la base
                 if robot.timer <= 0.0 {
                     if *position != *base_pos {
                         position.x = (position.x + (base_pos.x - position.x).signum()) % carte.largeur as i32;
                         position.y = (position.y + (base_pos.y - position.y).signum()) % carte.hauteur as i32;
                     } else {
                         *state = RobotState::AtBase;
-                        robot.timer = 5.0; // Attente de 5 secondes à la base
+                        robot.timer = 5.0; // Attente à la base
                     }
                     robot.timer = 1.0 / robot.vitesse as f32; 
-                } else {
-                    robot.timer -= delta;
                 }
-            }            
-            
+            }
             RobotState::AtBase => {
+                // Logique pour envoyer le robot explorer à nouveau
                 if robot.timer <= 0.0 { 
-                    // On cherche une position random sur la map en cible
                     let target_x = rand::thread_rng().gen_range(0..carte.largeur) as i32;
                     let target_y = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
                     robot.target_position = Some(Position { x: target_x, y: target_y });
@@ -534,17 +547,15 @@ fn move_robots_on_map_system(
             
                     *state = RobotState::Exploring; 
                     robot.timer = 1.0 / robot.vitesse as f32; 
-                } else {
-                    robot.timer -= delta;
                 }
-            }            
-            
+            }
         }
 
         transform.translation.x = position.x as f32;
         transform.translation.y = position.y as f32;
     }
 }
+
 
 
 fn discover_elements(
