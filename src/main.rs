@@ -1,13 +1,9 @@
 extern crate noise;
 
-use bevy::render::view::window;
 use bevy::window::WindowMode;
 use bevy::{input::mouse::MouseWheel, prelude::*};
-use bevy::input::keyboard::{self, KeyboardInput};
-use bevy::input::ButtonState;
-use noise::{NoiseFn, Perlin, Seedable};
+use noise::{NoiseFn, Perlin};
 use rand::Rng;
-use std::f32::consts::PI;
 use std::io;
 
 const ENERGIE_SPRITE: &str = "textures/energie.png";
@@ -643,7 +639,6 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(SeedResource { seed: seed_option })
-        // .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_map)
         .add_systems(PostStartup, setup_bordures)
         .add_systems(PostStartup, spawn_robots)
