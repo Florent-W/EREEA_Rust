@@ -90,6 +90,7 @@ struct Robot {
 struct ElementCarte {
     element: ElementMap,
     est_decouvert: EtatDecouverte,
+    decouvert_robot_id: Option<i32>,  // ID du robot qui a découvert la case
 }
 
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
@@ -182,7 +183,8 @@ fn setup_map(
                     })
                     .insert(ElementCarte {
                         element,
-                        est_decouvert: EtatDecouverte::NonDecouvert
+                        est_decouvert: EtatDecouverte::NonDecouvert,
+                        decouvert_robot_id: None,
                     })
                     .insert(position);
                 }
@@ -354,6 +356,7 @@ fn collect_resources_system(
                     }
                 }
                 if(element_carte.est_decouvert == EtatDecouverte::NonDecouvert) {
+                    element_carte.decouvert_robot_id = Some(robot.id);
                     element_carte.est_decouvert = EtatDecouverte::EnAttente;
                 }
             }
@@ -558,20 +561,22 @@ fn move_robots_on_map_system(
 
 fn discover_elements(
     mut commands: Commands,
-    robot_query: Query<&RobotState, With<Robot>>,
+    robot_query: Query<(&Robot, &RobotState)>, // Include Robot component to access the ID
     mut elements_query: Query<(&mut ElementCarte, &Position)>,
 ) {
-    // On met à jour quand le robot est à la base
-    let robot_at_base = robot_query.iter().any(|state| matches!(state, RobotState::AtBase));
-
-    if robot_at_base {
-        for (mut element_carte, _) in elements_query.iter_mut() {
-            if element_carte.est_decouvert == EtatDecouverte::EnAttente {
-                element_carte.est_decouvert = EtatDecouverte::Decouvert;
+    // Iterate over robots to find those at the base
+    for (robot, state) in robot_query.iter() {
+        if matches!(state, RobotState::AtBase) {
+            // Check each element to see if it was discovered by the robot that is at the base
+            for (mut element_carte, _) in elements_query.iter_mut() {
+                if element_carte.est_decouvert == EtatDecouverte::EnAttente && element_carte.decouvert_robot_id == Some(robot.id) {
+                    element_carte.est_decouvert = EtatDecouverte::Decouvert;
+                }
             }
         }
     }
 }
+
 
 fn assign_targets(
     mut commands: Commands,
