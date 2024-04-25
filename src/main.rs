@@ -622,15 +622,68 @@ fn toggle_fullscreen(input: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut W
     }
 }
 
+
+/***
+ * Fonction pour demander la résolution à l'utilisateur
+ */
+
+
+// Enum pour représenter les options de résolution prédéfinies
+enum ResolutionOption {
+    Resolution1280x720,
+    Resolution1920x1080,
+    CustomResolution(f32, f32),
+}
+
+fn request_resolution_from_user() -> (f32, f32) {
+    println!("Choisissez la résolution :");
+    println!("1. 1280x720");
+    println!("2. 1920x1080");
+    println!("3. Autre (entrez la résolution personnalisée sous la forme largeur hauteur)");
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Erreur dans la lecture de la ligne");
+
+    match input.trim() {
+        "1" => (1280.0, 720.0),
+        "2" => (1920.0, 1080.0),
+        "3" => {
+            println!("Entrez la résolution personnalisée (largeur hauteur) :");
+            let mut custom_input = String::new();
+            io::stdin().read_line(&mut custom_input).expect("Erreur dans la lecture de la ligne");
+
+            let parts: Vec<&str> = custom_input.trim().split_whitespace().collect();
+            if parts.len() == 2 {
+                if let (Ok(width), Ok(height)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>()) {
+                    (width, height)
+                } else {
+                    println!("Entrée invalide, utilisation de la résolution par défaut (1280x720).");
+                    (1280.0, 720.0)
+                }
+            } else {
+                println!("Entrée invalide, utilisation de la résolution par défaut (1280x720).");
+                (1280.0, 720.0)
+            }
+        }
+        _ => {
+            println!("Option invalide, utilisation de la résolution par défaut (1280x720).");
+            (1280.0, 720.0)
+        }
+    }
+}
+
+
 fn main() {
     let seed_option = request_seed_from_user();
+    let (width, height) = request_resolution_from_user(); // Demander la résolution
+
 
     App::new()
         .add_plugins((DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
               title: "Essaim de Robots pour Exploration et Etude Astrobiologique".to_string(),
               mode: WindowMode::Windowed,
-              resolution: (1280., 720.).into(),
+              resolution: (width, height).into(),
               ..default()
             }),
             ..default()
