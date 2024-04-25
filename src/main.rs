@@ -561,13 +561,13 @@ fn move_robots_on_map_system(
 
 fn discover_elements(
     mut commands: Commands,
-    robot_query: Query<(&Robot, &RobotState)>, // Include Robot component to access the ID
+    robot_query: Query<(&Robot, &RobotState)>, 
     mut elements_query: Query<(&mut ElementCarte, &Position)>,
 ) {
-    // Iterate over robots to find those at the base
+    // Vérifier si un robot est à la base
     for (robot, state) in robot_query.iter() {
         if matches!(state, RobotState::AtBase) {
-            // Check each element to see if it was discovered by the robot that is at the base
+            // Si un robot est à la base, marquer les cases découvertes par ce robot
             for (mut element_carte, _) in elements_query.iter_mut() {
                 if element_carte.est_decouvert == EtatDecouverte::EnAttente && element_carte.decouvert_robot_id == Some(robot.id) {
                     element_carte.est_decouvert = EtatDecouverte::Decouvert;
