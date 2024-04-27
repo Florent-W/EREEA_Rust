@@ -9,6 +9,8 @@ edition = "2021"
 bevy = "0.13.1"
 noise = "0.8"
 rand = "0.8.5"
+bevy_egui = "0.27"
+bevy_ui_exact_image = "0.2.1"
 
 [[bin]]
 name = "essaim_de_robots_pour_exploration_et_etude_astrobiologique"

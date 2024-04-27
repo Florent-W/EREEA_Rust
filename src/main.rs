@@ -10,10 +10,6 @@ const ENERGIE_SPRITE: &str = "textures/energie.png";
 const MINERAL_SPRITE: &str = "textures/minerai.png";
 const LIEU_INTERET_SPRITE: &str = "textures/lieu.png";
 const BASE_SPRITE: &str = "textures/base.png";
-const HERBE_SPRITE: &str = "textures/herbe.png";
-const TERRE_SPRITE: &str = "textures/terre.png";
-const SABLE_SPRITE: &str = "textures/sable.png";
-const EAU_SPRITE: &str = "textures/eau.png";
 const ROBOT_SPRITE: &str = "textures/robot.png";
 const OBSTACLE_SPRITE: &str = "textures/obstacle.png";
 
@@ -74,6 +70,13 @@ enum RobotState {
     AtBase,
 }
 
+#[derive(Clone)]
+enum TextureOrColor {
+    Texture(Handle<Image>),
+    Color(Color),
+}
+
+
 #[derive(Component, Debug)]
 struct Robot {
     id: i32,
@@ -114,7 +117,7 @@ fn setup_camera(mut commands: Commands, center_x: f32, center_y: f32) {
                    .with_scale(Vec3::new(zoom_level, zoom_level, 1.0)),
         ..default()
     });
-    commands.insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5))); // Définit la couleur de fond à gris    
+    commands.insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)));    
 }
 
 
@@ -131,13 +134,9 @@ fn setup_map(
     let mineral_texture_handle = asset_server.load(MINERAL_SPRITE);
     let lieu_interet_texture_handle = asset_server.load(LIEU_INTERET_SPRITE);
     let base_handle = asset_server.load(BASE_SPRITE);
-    let herbe_texture_handle = asset_server.load(HERBE_SPRITE);
-    let terre_texture_handle = asset_server.load(TERRE_SPRITE);
-    let sable_texture_handle = asset_server.load(SABLE_SPRITE);
-    let eau_texture_handle = asset_server.load(EAU_SPRITE);
     let obstacle_handle = asset_server.load(OBSTACLE_SPRITE); 
 
-    // Définir les dimensions de la carte
+    // Dimensions de la carte
     let largeur = 50;
     let hauteur = 50;
 
@@ -161,30 +160,44 @@ fn setup_map(
 
                 // Déterminer quel type de ressource générer en fonction de la valeur du bruit
                 let sprite = match noise_normalised {
-                    n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), obstacle_handle.clone(), 0.0015)),
-                    n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), energie_texture_handle.clone(), 0.0015)),
-                    n if n > 0.72 => Some((ElementMap::Ressource(Ressource::Mineral), mineral_texture_handle.clone(), 0.0012)),
-                    n if n > 0.7 => Some((ElementMap::Ressource(Ressource::LieuInteretScientifique), lieu_interet_texture_handle.clone(), 0.0015)),
-                    n if n >= 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Herbe), herbe_texture_handle.clone(), 0.003)),
-                    n if n > 0.4 && n < 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Terre), terre_texture_handle.clone(), 0.002)),
-                    n if n > 0.2 && n <= 0.4 => Some((ElementMap::ElementGeographique(ElementGeographique::Sable), sable_texture_handle.clone(), 0.0014)),
-                    n if n >= 0.0 => Some((ElementMap::ElementGeographique(ElementGeographique::Eau), eau_texture_handle.clone(), 0.00197)),
+                    n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), TextureOrColor::Texture(obstacle_handle.clone()), 0.0015)),
+                    n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), TextureOrColor::Texture(energie_texture_handle.clone()), 0.0015)),
+                    n if n > 0.72 => Some((ElementMap::Ressource(Ressource::Mineral), TextureOrColor::Texture(mineral_texture_handle.clone()), 0.0012)),
+                    n if n > 0.7 => Some((ElementMap::Ressource(Ressource::LieuInteretScientifique), TextureOrColor::Texture(lieu_interet_texture_handle.clone()), 0.0015)),
+                    n if n >= 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Herbe), TextureOrColor::Color(Color::rgb(0.5, 0.75, 0.3)), 1.0)),
+                    n if n > 0.4 && n < 0.6 => Some((ElementMap::ElementGeographique(ElementGeographique::Terre), TextureOrColor::Color(Color::rgb(0.69, 0.62, 0.541)), 1.0)),
+                    n if n > 0.2 && n <= 0.4 => Some((ElementMap::ElementGeographique(ElementGeographique::Sable), TextureOrColor::Color(Color::rgb(0.76, 0.69, 0.5)), 1.0)),
+                    n if n >= 0.0 => Some((ElementMap::ElementGeographique(ElementGeographique::Eau), TextureOrColor::Color(Color::rgb(0.4, 0.5, 0.8)), 1.0)),
                     _ => None,
                 };
 
-                if let Some((element, texture_handle, taille)) = sprite {
-                    commands.spawn(SpriteBundle {
-                        texture: texture_handle,
-                        transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
-                                   .with_scale(Vec3::splat(taille)),
-                        visibility: Visibility::Visible,           
-                        ..Default::default()
-                    })
-                    .insert(ElementCarte {
-                        element,
-                        est_decouvert: EtatDecouverte::NonDecouvert
-                    })
-                    .insert(position);
+                if let Some((element, texture_or_color, taille)) = sprite {
+                    let sprite_bundle = match texture_or_color {
+                        TextureOrColor::Texture(texture_handle) => SpriteBundle {
+                            texture: texture_handle,
+                            transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
+                                       .with_scale(Vec3::splat(taille)),
+                            visibility: Visibility::Visible,
+                            ..Default::default()
+                        },
+                        TextureOrColor::Color(color) => SpriteBundle {
+                            sprite: Sprite {
+                                color,
+                                ..Default::default()
+                            },
+                            transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
+                                       .with_scale(Vec3::splat(taille)),
+                            visibility: Visibility::Visible,
+                            ..Default::default()
+                        },
+                    };
+        
+                    commands.spawn(sprite_bundle)
+                            .insert(ElementCarte {
+                                element,
+                                est_decouvert: EtatDecouverte::NonDecouvert
+                            })
+                            .insert(position);
                 }
         }
     }
@@ -373,11 +386,9 @@ fn update_robot_state(
     let (_, base_pos) = base_query.single();
 
     for (mut robot, robot_pos, mut state) in query.iter_mut() {
-        // If the robot has no target and has moved 30 steps, it should return
         if robot.target_position.is_none() && *state == RobotState::Exploring {
             *state = RobotState::Returning;
         }
-        // Update state to AtBase if the robot reaches the base
         if *state == RobotState::Returning && robot_pos.x == base_pos.x && robot_pos.y == base_pos.y {
             *state = RobotState::AtBase;
         }
@@ -609,10 +620,31 @@ fn assign_targets(
 }
 
 /***
+ * Fonction pour ajouter une légende
+ */
+fn setup_legend(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut windows: Query<&mut Window> 
+) {
+    let legend_texture_handle = asset_server.load("legende.png");
+
+    if let Some(mut window) = windows.get_single_mut().ok() {
+
+        commands.spawn(SpriteBundle {
+            texture: legend_texture_handle,
+            transform: Transform::from_xyz(-5.0, 30.0, 0.0)
+                       .with_scale(Vec3::splat(0.01)),
+            ..Default::default()
+        });
+    } 
+}
+
+/***
  * Fonction pour activer ou désactiver le plein écran
  */
 fn toggle_fullscreen(input: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Window>) {
-    if input.just_pressed(KeyCode::F1) {
+    if input.just_pressed(KeyCode::F11) {
         for mut window in windows.iter_mut() {
             window.mode = match window.mode {
                 WindowMode::Windowed => WindowMode::BorderlessFullscreen,
@@ -687,12 +719,14 @@ fn main() {
               ..default()
             }),
             ..default()
+            
           },
         )))
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(SeedResource { seed: seed_option })
         .add_systems(Startup, setup_map)
+        .add_systems(Startup, setup_legend)
         .add_systems(PostStartup, setup_bordures)
         .add_systems(PostStartup, spawn_robots)
         .add_systems(Update, move_robots_on_map_system)
