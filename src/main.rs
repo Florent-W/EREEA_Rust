@@ -5,6 +5,8 @@ use bevy::{input::mouse::MouseWheel, prelude::*};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 use std::io;
+use bevy_kira_audio::prelude::*;
+use bevy::prelude::*;
 
 const ENERGIE_SPRITE: &str = "textures/energie.png";
 const MINERAL_SPRITE: &str = "textures/minerai.png";
@@ -117,6 +119,10 @@ fn setup_camera(mut commands: Commands, center_x: f32, center_y: f32) {
     commands.insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5))); // Définit la couleur de fond à gris    
 }
 
+//Fonction pour démarrer la musique de fond
+fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
+    audio.play(asset_server.load("music.ogg")).looped();
+}
 
 /***
  * Fonction pour charger la map
@@ -342,7 +348,8 @@ fn collect_resources_system(
                     ElementMap::Ressource(Ressource::Energie) => {
                       //  println!("Robot {} collected energy at position {:?}", robot.nom, robot_position);
                         commands.entity(entity).despawn();
-                    },
+                        //Ajout d'un bruitage au moment de la collecte                        
+                     },
                     ElementMap::Ressource(Ressource::Mineral) => {
                       //  println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position); 
                         commands.entity(entity).despawn();
@@ -672,7 +679,6 @@ fn request_resolution_from_user() -> (f32, f32) {
     }
 }
 
-
 fn main() {
     let seed_option = request_seed_from_user();
     let (width, height) = request_resolution_from_user(); // Demander la résolution
@@ -689,6 +695,8 @@ fn main() {
             ..default()
           },
         )))
+        .add_plugins(AudioPlugin::default())
+        .add_systems(Startup, start_background_audio)
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(SeedResource { seed: seed_option })
@@ -706,4 +714,5 @@ fn main() {
         .add_systems(Update, zoom_camera_system)
         .add_systems(PostUpdate, discover_elements)
         .run();
+
 }
