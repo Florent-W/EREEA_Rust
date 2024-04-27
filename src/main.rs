@@ -124,6 +124,7 @@ fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
     audio.play(asset_server.load("music.ogg")).looped();
 }
 
+
 /***
  * Fonction pour charger la map
  */
@@ -335,6 +336,8 @@ fn collect_resources_system(
     mut commands: Commands,
     mut robot_query: Query<(Entity, &mut Robot, &Position)>,
     mut element_carte_query: Query<(Entity, &mut ElementCarte, &Position)>,
+    audio: Res<Audio>,
+    asset_server: Res<AssetServer>,
 ) {
     for (robot_entity, mut robot, robot_position) in robot_query.iter_mut() {
        // println!("{:?}", robot.type_robot);
@@ -348,16 +351,17 @@ fn collect_resources_system(
                     ElementMap::Ressource(Ressource::Energie) => {
                       //  println!("Robot {} collected energy at position {:?}", robot.nom, robot_position);
                         commands.entity(entity).despawn();
-                        //Ajout d'un bruitage au moment de la collecte                        
-                     },
+                        audio.play(asset_server.load("energy.ogg"));                     },
                     ElementMap::Ressource(Ressource::Mineral) => {
                       //  println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position); 
                         commands.entity(entity).despawn();
+                        audio.play(asset_server.load("encaissement.ogg"));                    
                     },
                     ElementMap::Ressource(Ressource::LieuInteretScientifique) => {
-                      //  println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position); 
+                      //  println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position);
                     },
                     _ => {
+                        
                     }
                 }
                 if(element_carte.est_decouvert == EtatDecouverte::NonDecouvert) {
