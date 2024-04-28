@@ -436,24 +436,28 @@ fn collect_resources_system(
                         compteur.energie += 1;
                         commands.entity(entity).despawn();
                         update_text(&compteur, &mut query_energie, &mut query_minerai);
-                    },
+                    }
                     ElementMap::Ressource(Ressource::Mineral) => {
                       //  println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position); 
                         compteur.minerai += 1;
                         commands.entity(entity).despawn();
                         update_text(&compteur, &mut query_energie, &mut query_minerai);
-                    },
+                    }
                     ElementMap::Ressource(Ressource::LieuInteretScientifique) => {
                       //  println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position); 
-                    },
+                    }
                     _ => {
                     }
                 }
-            }
-            if !resource_collected {
-                // println!("Robot {} did not collect any resources at position {:?}", robot.nom, robot_position);
+                if (element_carte.est_decouvert == EtatDecouverte::NonDecouvert) {
+                    element_carte.est_decouvert = EtatDecouverte::EnAttente;
+                }
             }
         }
+        if !resource_collected {
+            // println!("Robot {} did not collect any resources at position {:?}", robot.nom, robot_position);
+        }
+    }
     }
 }
 
