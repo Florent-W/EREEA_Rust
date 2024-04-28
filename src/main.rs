@@ -85,7 +85,7 @@ enum TextureOrColor {
 
 #[derive(Component, Debug)]
 struct Robot {
-    id: i32,
+    id: u32,
     nom: String,
     pv_max: i32,
     type_robot: TypeRobot,
@@ -104,6 +104,11 @@ struct Compteur {
 #[derive(Resource, Debug)]
 struct VitesseGlobale {
     vitesse: u32
+}
+
+#[derive(Resource, Debug)]
+struct CompteurRobotsSpawn {
+    nombre: u32
 }
 
 #[derive(Component)]
@@ -339,14 +344,9 @@ fn setup_bordures(mut commands: Commands, query: Query<(&Carte, &Position)>) {
 }
 
 /***
- * Fonction d'ajout des robots sur la carte
+ * Fonction pour demander le nombre de robots à faire spawn
  */
-fn spawn_robots(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    base_query: Query<(&Base, &Position)>,
-    vitesse_globale: Res<VitesseGlobale>
-) {
+fn request_nb_robots() -> u32 {
     println!("Choisissez le nombre de robot :");
 
     let mut input = String::new();
@@ -358,15 +358,33 @@ fn spawn_robots(
 
     let trimmed = input.trim();
 
-    let limit = trimmed.parse::<i32>().unwrap_or_else(|_| {
+    let nb_robots = trimmed.parse::<u32>().unwrap_or_else(|_| {
         println!("Mauvaise valeur dans le choix du nombre de robot. La simulation commencera à 5 robots.");
         5 
     });
-    
+
+    if nb_robots > 30 {
+        println!("Le nombre de robots ne peut pas dépasser 30. La simulation commencera à 30 robots.");
+        30
+    } else {
+        nb_robots
+    }
+}
+
+/***
+ * Fonction d'ajout des robots sur la carte
+ */
+fn spawn_robots(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    base_query: Query<(&Base, &Position)>,
+    vitesse_globale: Res<VitesseGlobale>,
+    compteur_robots_spawn: Res<CompteurRobotsSpawn>
+) {   
     let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
 
     if let Some((_, base_position)) = base_query.iter().next() {
-        for id in 1..=limit {
+        for id in 1..=compteur_robots_spawn.nombre {
             let (type_robot, color, vitesse) = match id % 3 {
                 0 => (TypeRobot::Explorateur, Some(Color::rgb(0.0, 1.0, 0.0)), 2),
                 1 => (TypeRobot::Collecteur, Some(Color::rgb(0.0, 0.0, 1.0)), 1),
@@ -970,7 +988,8 @@ fn request_resolution_from_user() -> (f32, f32) {
 
 fn main() {
     let seed_option = request_seed_from_user();
-    let (width, height) = request_resolution_from_user(); // Demander la résolution
+    let (width, height) = request_resolution_from_user();
+    let nb_robots = request_nb_robots();
 
     App::new()
         .add_plugins(
@@ -989,6 +1008,7 @@ fn main() {
         .insert_resource(VitesseGlobale { vitesse : 1 })
         .insert_resource(SeedResource { seed: seed_option })
         .insert_resource(Compteur { minerai: 0, energie: 0 })
+        .insert_resource(CompteurRobotsSpawn { nombre: nb_robots })
         .add_systems(Startup, setup_map)
         .add_systems(Startup, setup_ui)
         .add_systems(Startup, setup_legend)
