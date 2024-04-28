@@ -1,5 +1,6 @@
 extern crate noise;
 
+use bevy::ecs::query;
 use bevy::window::WindowMode;
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use noise::{NoiseFn, Perlin};
@@ -55,6 +56,12 @@ enum TypeRobot {
     Visiteur,
 }
 
+enum ResolutionOption {
+    Resolution1280x720,
+    Resolution1920x1080,
+    CustomResolution(f32, f32),
+}
+
 #[derive(Resource, Debug)]
 struct AffichageCasesNonDecouvertes(bool);
 
@@ -87,6 +94,19 @@ struct Robot {
     target_position: Option<Position>,
     steps_moved: i32,
 }
+
+#[derive(Resource, Debug)]
+struct Compteur {
+    minerai: u32,
+    energie: u32
+}
+
+#[derive(Component)]
+struct TexteEnergie;
+
+#[derive(Component)]
+struct TexteMinerai;
+
 
 #[derive(Component, Debug)]
 struct ElementCarte {
@@ -398,31 +418,35 @@ fn collect_resources_system(
     mut commands: Commands,
     mut robot_query: Query<(Entity, &mut Robot, &Position)>,
     mut element_carte_query: Query<(Entity, &mut ElementCarte, &Position)>,
+    mut query_energie: Query<&mut Text, (With<TexteEnergie>, Without<TexteMinerai>)>,
+    mut query_minerai: Query<&mut Text, (With<TexteMinerai>, Without<TexteEnergie>)>,
+    mut compteur: ResMut<Compteur>,
 ) {
     for (robot_entity, mut robot, robot_position) in robot_query.iter_mut() {
         // println!("{:?}", robot.type_robot);
         if robot.type_robot == TypeRobot::Collecteur {
-            // println!("Checking robot {} at position {:?}", robot.nom, robot_position);
-            let mut resource_collected = false;
-            for (entity, mut element_carte, resource_position) in element_carte_query.iter_mut() {
-                if robot_position == resource_position {
-                    resource_collected = true; // La ressource a été trouvée à la même position que le robot
-                    match element_carte.element {
-                        ElementMap::Ressource(Ressource::Energie) => {
-                            //  println!("Robot {} collected energy at position {:?}", robot.nom, robot_position);
-                            commands.entity(entity).despawn();
-                        }
-                        ElementMap::Ressource(Ressource::Mineral) => {
-                            //  println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position);
-                            commands.entity(entity).despawn();
-                        }
-                        ElementMap::Ressource(Ressource::LieuInteretScientifique) => {
-                            //  println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position);
-                        }
-                        _ => {}
-                    }
-                    if (element_carte.est_decouvert == EtatDecouverte::NonDecouvert) {
-                        element_carte.est_decouvert = EtatDecouverte::EnAttente;
+       // println!("Checking robot {} at position {:?}", robot.nom, robot_position); 
+        let mut resource_collected = false; 
+        for (entity, mut element_carte, resource_position) in element_carte_query.iter_mut() {
+            if robot_position == resource_position {
+                resource_collected = true; // La ressource a été trouvée à la même position que le robot
+                match element_carte.element {
+                    ElementMap::Ressource(Ressource::Energie) => {
+                      //  println!("Robot {} collected energy at position {:?}", robot.nom, robot_position);
+                        compteur.energie += 1;
+                        commands.entity(entity).despawn();
+                        update_text(&compteur, &mut query_energie, &mut query_minerai);
+                    },
+                    ElementMap::Ressource(Ressource::Mineral) => {
+                      //  println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position); 
+                        compteur.minerai += 1;
+                        commands.entity(entity).despawn();
+                        update_text(&compteur, &mut query_energie, &mut query_minerai);
+                    },
+                    ElementMap::Ressource(Ressource::LieuInteretScientifique) => {
+                      //  println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position); 
+                    },
+                    _ => {
                     }
                 }
             }
@@ -704,6 +728,94 @@ fn assign_targets(
 }
 
 /***
+ * Fonction pour ajouter l'interface
+ */
+fn setup_ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>
+)
+{
+    let font = asset_server.load("polices/RobotoMono.ttf");
+
+    commands.spawn(TextBundle {
+        text: Text::from_sections([
+            TextSection::new(
+                "Énergies: ",
+                TextStyle {
+                    font: font.clone(),
+                    font_size: 30.0,
+                    color: Color::WHITE,
+                }
+            ),
+            TextSection::new(
+                "0",
+                TextStyle {
+                    font: font.clone(),
+                    font_size: 30.0,
+                    color: Color::GREEN,
+                }
+            )
+        ])
+        .with_justify(JustifyText::Left),
+        style: Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(50.0),
+            left: Val::Px(10.0),
+            ..default()
+        },
+        ..default()
+    })
+    .insert(TexteEnergie);
+
+    commands.spawn(TextBundle {
+        text: Text::from_sections([
+            TextSection::new(
+                "Minerais: ",
+                TextStyle {
+                    font: font.clone(),
+                    font_size: 30.0,
+                    color: Color::WHITE,
+                }
+            ),
+            TextSection::new(
+                "0",
+                TextStyle {
+                    font: font,
+                    font_size: 30.0,
+                    color: Color::PURPLE,
+                }
+            )
+        ])
+        .with_justify(JustifyText::Left),
+        style: Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(90.0), 
+            left: Val::Px(10.0),
+            ..default()
+        },
+        ..default()
+    })
+    .insert(TexteMinerai);    
+}
+
+/***
+ * Fonction pour mettre à jour le texte des compteurs
+ */
+fn update_text(
+    compteur: &Compteur,
+    mut query_energie: &mut Query<&mut Text, (With<TexteEnergie>, Without<TexteMinerai>)>,
+    mut query_minerai: &mut Query<&mut Text, (With<TexteMinerai>, Without<TexteEnergie>)>
+) {
+    if let Ok(mut texte_energie) = query_energie.get_single_mut() {
+        texte_energie.sections[1].value = compteur.energie.to_string();
+    }
+    if let Ok(mut texte_minerai) = query_minerai.get_single_mut() {
+        texte_minerai.sections[1].value = compteur.minerai.to_string();
+    } 
+}
+
+
+/***
  * Fonction pour ajouter une légende
  */
 fn setup_legend(
@@ -739,14 +851,6 @@ fn toggle_fullscreen(input: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut W
 /***
  * Fonction pour demander la résolution à l'utilisateur
  */
-
-// Enum pour représenter les options de résolution prédéfinies
-enum ResolutionOption {
-    Resolution1280x720,
-    Resolution1920x1080,
-    CustomResolution(f32, f32),
-}
-
 fn request_resolution_from_user() -> (f32, f32) {
     println!("Choisissez la résolution :");
     println!("1. 1280x720");
@@ -810,7 +914,9 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(SeedResource { seed: seed_option })
+        .insert_resource(Compteur { minerai: 0, energie: 0 })
         .add_systems(Startup, setup_map)
+        .add_systems(Startup, setup_ui)
         .add_systems(Startup, setup_legend)
         .add_systems(PostStartup, setup_bordures)
         .add_systems(PostStartup, spawn_robots)
