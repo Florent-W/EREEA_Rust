@@ -1,5 +1,6 @@
 extern crate noise;
 
+use bevy::app::AppExit;
 use bevy::ecs::query;
 use bevy::window::WindowMode;
 use bevy::{input::mouse::MouseWheel, prelude::*};
@@ -940,6 +941,15 @@ fn toggle_fullscreen(input: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut W
 }
 
 /***
+ * Fonction pour quitter le jeu
+ */
+fn toggle_exit_game(input: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
+    if input.just_pressed(KeyCode::Escape) {
+        exit.send(AppExit);
+    } 
+}
+
+/***
  * Fonction pour demander la résolution à l'utilisateur
  */
 fn request_resolution_from_user() -> (f32, f32) {
@@ -1018,6 +1028,7 @@ fn main() {
         .add_systems(Update, toggle_cases_non_decouvertes)
         .add_systems(Update, toggle_vitesse)
         .add_systems(Update, toggle_fullscreen)
+        .add_systems(Update, toggle_exit_game)
         .add_systems(Update, assign_targets)
         .add_systems(Update, adjust_visibility_system)
         .add_systems(Update, update_robot_state)
