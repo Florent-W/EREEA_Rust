@@ -89,10 +89,10 @@ struct Robot {
     nom: String,
     pv_max: i32,
     type_robot: TypeRobot,
-    vitesse: i32,
+    vitesse: u32,
     timer: f32,
     target_position: Option<Position>,
-    steps_moved: i32,
+    steps_moved: u32,
 }
 
 #[derive(Resource, Debug)]
@@ -101,12 +101,19 @@ struct Compteur {
     energie: u32
 }
 
+#[derive(Resource, Debug)]
+struct VitesseGlobale {
+    vitesse: u32
+}
+
 #[derive(Component)]
 struct TexteEnergie;
 
 #[derive(Component)]
 struct TexteMinerai;
 
+#[derive(Component)]
+struct TexteVitesse;
 
 #[derive(Component, Debug)]
 struct ElementCarte {
@@ -338,6 +345,7 @@ fn spawn_robots(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     base_query: Query<(&Base, &Position)>,
+    vitesse_globale: Res<VitesseGlobale>
 ) {
     println!("Choisissez le nombre de robot :");
 
@@ -350,8 +358,11 @@ fn spawn_robots(
 
     let trimmed = input.trim();
 
-    let limit: i32 = trimmed.parse().expect("Input was not a valid integer");
-
+    let limit = trimmed.parse::<i32>().unwrap_or_else(|_| {
+        println!("Mauvaise valeur dans le choix du nombre de robot. La simulation commencera à 5 robots.");
+        5 
+    });
+    
     let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
 
     if let Some((_, base_position)) = base_query.iter().next() {
@@ -372,7 +383,7 @@ fn spawn_robots(
             let target_x: i32 = rand::thread_rng().gen_range(0..50) as i32;
             let target_y: i32 = rand::thread_rng().gen_range(0..50) as i32;
 
-            let timer = 5.0 / vitesse as f32;
+            let timer = 5.0 / (vitesse * vitesse_globale.vitesse) as f32;
 
             commands
                 .spawn(SpriteBundle {
@@ -418,8 +429,8 @@ fn collect_resources_system(
     mut commands: Commands,
     mut robot_query: Query<(Entity, &mut Robot, &Position)>,
     mut element_carte_query: Query<(Entity, &mut ElementCarte, &Position)>,
-    mut query_energie: Query<&mut Text, (With<TexteEnergie>, Without<TexteMinerai>)>,
-    mut query_minerai: Query<&mut Text, (With<TexteMinerai>, Without<TexteEnergie>)>,
+    mut query_energie: Query<&mut Text, (With<TexteEnergie>, Without<TexteMinerai>, Without<TexteVitesse>)>,
+    mut query_minerai: Query<&mut Text, (With<TexteMinerai>, Without<TexteEnergie>, Without<TexteVitesse>)>,
     mut compteur: ResMut<Compteur>,
 ) {
     for (robot_entity, mut robot, robot_position) in robot_query.iter_mut() {
@@ -531,8 +542,24 @@ fn toggle_cases_non_decouvertes(
     // Bascule l'état d'affichage quand la touche Tab est pressée
     if keyboard_input.just_pressed(KeyCode::Tab) {
         affichage.0 = !affichage.0;
-        println!("Affichage cases non découvertes: {:?}", affichage.0);
-        print!("test");
+    }
+}
+
+/*
+ *** Fonction pour augmenter ou diminuer la vitesse globale de l'application et du parcours des robots
+ */ 
+fn toggle_vitesse(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut vitesse_globale: ResMut<VitesseGlobale>,
+    mut query_vitesse: Query<&mut Text, (With<TexteVitesse>, Without<TexteEnergie>, Without<TexteMinerai>)>,
+) {
+    if keyboard_input.just_pressed(KeyCode::F2) && vitesse_globale.vitesse < 150 {
+        vitesse_globale.vitesse += 1;
+        update_text_vitesse(&mut query_vitesse, vitesse_globale)
+    }
+    else if keyboard_input.just_pressed(KeyCode::F1) && vitesse_globale.vitesse > 1 {
+        vitesse_globale.vitesse -= 1;
+        update_text_vitesse(&mut query_vitesse, vitesse_globale)
     }
 }
 
@@ -588,6 +615,7 @@ fn move_robots_on_map_system(
     base_query: Query<(&Base, &Position), Without<Robot>>, // Exclure les Robots ici
     element_carte_query: Query<(&ElementCarte, &Position), Without<Robot>>, // Exclure les Robots ici
     time: Res<Time>,
+    vitesse_globale: Res<VitesseGlobale>
 ) {
     let delta = time.delta_seconds();
     let carte = carte_query.single();
@@ -600,7 +628,7 @@ fn move_robots_on_map_system(
             RobotState::Exploring => {
                 if robot.timer <= 0.0 {
                     if let Some(target_position) = &robot.target_position {
-                        if *position != *target_position && robot.steps_moved < 30 {
+                        if *position != *target_position {
                             // Vérifie si la position suivante est un obstacle
                             let next_x = (position.x + (target_position.x - position.x).signum())
                                 % carte.largeur as i32;
@@ -636,7 +664,7 @@ fn move_robots_on_map_system(
                             *state = RobotState::Returning;
                         }
                     }
-                    robot.timer = 1.0 / robot.vitesse as f32;
+                    robot.timer = 1.0 / (robot.vitesse * vitesse_globale.vitesse) as f32;
                 }
             }
             RobotState::Returning => {
@@ -651,7 +679,7 @@ fn move_robots_on_map_system(
                         *state = RobotState::AtBase;
                         robot.timer = 5.0; // Attente à la base
                     }
-                    robot.timer = 1.0 / robot.vitesse as f32;
+                    robot.timer = 1.0 / (robot.vitesse * vitesse_globale.vitesse) as f32;
                 }
             }
             RobotState::AtBase => {
@@ -666,7 +694,7 @@ fn move_robots_on_map_system(
                     robot.steps_moved = 0;
 
                     *state = RobotState::Exploring;
-                    robot.timer = 1.0 / robot.vitesse as f32;
+                    robot.timer = 1.0 / (robot.vitesse * vitesse_globale.vitesse) as f32;
                 }
             }
         }
@@ -784,7 +812,7 @@ fn setup_ui(
             TextSection::new(
                 "0",
                 TextStyle {
-                    font: font,
+                    font: font.clone(),
                     font_size: 30.0,
                     color: Color::PURPLE,
                 }
@@ -799,7 +827,37 @@ fn setup_ui(
         },
         ..default()
     })
-    .insert(TexteMinerai);    
+    .insert(TexteMinerai);  
+
+    commands.spawn(TextBundle {
+        text: Text::from_sections([
+            TextSection::new(
+                "Vitesse: x",
+                TextStyle {
+                    font: font.clone(),
+                    font_size: 30.0,
+                    color: Color::WHITE,
+                }
+            ),
+            TextSection::new(
+                "1",
+                TextStyle {
+                    font: font.clone(),
+                    font_size: 30.0,
+                    color: Color::WHITE,
+                }
+            )
+        ])
+        .with_justify(JustifyText::Right),
+        style: Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(50.0), 
+            right: Val::Px(25.0),
+            ..default()
+        },
+        ..default()
+    })
+    .insert(TexteVitesse);    
 }
 
 /***
@@ -807,8 +865,8 @@ fn setup_ui(
  */
 fn update_text(
     compteur: &Compteur,
-    mut query_energie: &mut Query<&mut Text, (With<TexteEnergie>, Without<TexteMinerai>)>,
-    mut query_minerai: &mut Query<&mut Text, (With<TexteMinerai>, Without<TexteEnergie>)>
+    mut query_energie: &mut Query<&mut Text, (With<TexteEnergie>, Without<TexteMinerai>, Without<TexteVitesse>)>,
+    mut query_minerai: &mut Query<&mut Text, (With<TexteMinerai>, Without<TexteEnergie>, Without<TexteVitesse>)>,
 ) {
     if let Ok(mut texte_energie) = query_energie.get_single_mut() {
         texte_energie.sections[1].value = compteur.energie.to_string();
@@ -818,6 +876,17 @@ fn update_text(
     } 
 }
 
+/***
+ * Fonction pour mettre à jour le texte de la vitesse
+ */
+fn update_text_vitesse(
+    query_vitesse: &mut Query<&mut Text, (With<TexteVitesse>, Without<TexteEnergie>, Without<TexteMinerai>)>,
+    vitesse_globale: ResMut<VitesseGlobale>
+) {
+    if let Ok(mut texte_vitesse) = query_vitesse.get_single_mut() {
+        texte_vitesse.sections[1].value = vitesse_globale.vitesse.to_string();
+    } 
+}
 
 /***
  * Fonction pour ajouter une légende
@@ -917,6 +986,7 @@ fn main() {
         )
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))
+        .insert_resource(VitesseGlobale { vitesse : 1 })
         .insert_resource(SeedResource { seed: seed_option })
         .insert_resource(Compteur { minerai: 0, energie: 0 })
         .add_systems(Startup, setup_map)
@@ -926,6 +996,7 @@ fn main() {
         .add_systems(PostStartup, spawn_robots)
         .add_systems(Update, move_robots_on_map_system)
         .add_systems(Update, toggle_cases_non_decouvertes)
+        .add_systems(Update, toggle_vitesse)
         .add_systems(Update, toggle_fullscreen)
         .add_systems(Update, assign_targets)
         .add_systems(Update, adjust_visibility_system)
