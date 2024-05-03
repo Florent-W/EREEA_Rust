@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-use crate::{components::{TexteEnergie, TexteMinerai, TexteVitesse, VitesseGlobale}, update_text_vitesse};
+use crate::components::{TexteEnergie, TexteMinerai, TexteVitesse, VitesseGlobale};
+use crate::systems::update_text_vitesse;
 
 /*
  *** Fonction pour augmenter ou diminuer la vitesse globale de l'application et du parcours des robots

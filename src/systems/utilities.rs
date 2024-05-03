@@ -51,6 +51,25 @@ pub fn request_nb_robots() -> u32 {
 }
 
 /***
+ * Permet de demander la taille de la map à l'utilisateur
+ */
+ pub fn request_size_map_from_user() -> Option<u32> {
+    println!(
+        "Veuillez entrer la taille de la map :"
+    );
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Erreur dans la lecture de la ligne");
+
+    if input.trim().is_empty() {
+        None
+    } else {
+        input.trim().parse::<u32>().ok()
+    }
+}
+
+/***
   * Fonction pour voir toutes les cases
  */
 pub fn toggle_cases_non_decouvertes(

@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
-use crate::camera::setup_camera;
-use crate::SeedResource;
+use crate::systems::camera::setup_camera;
+use crate::components::SeedResource;
 
-use super::Ressource;
+use super::{Ressource, SizeMap};
 
 const ENERGIE_SPRITE: &str = "textures/energie.png";
 const MINERAL_SPRITE: &str = "textures/minerai.png";
@@ -14,8 +14,8 @@ const OBSTACLE_SPRITE: &str = "textures/obstacle.png";
 
 #[derive(Component, Debug)]
 pub struct Carte {
-    pub largeur: usize,
-    pub hauteur: usize,
+    pub largeur: u32,
+    pub hauteur: u32,
 }
 
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
@@ -66,7 +66,7 @@ enum TextureOrColor {
 /***
  * Fonction pour charger la map
  */
-pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_res: Res<SeedResource>) {
+pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_res: Res<SeedResource>, size_map_res: Res<SizeMap>) {
     // Charger les textures pour les différents éléments de la carte
     let energie_texture_handle = asset_server.load(ENERGIE_SPRITE);
     let mineral_texture_handle = asset_server.load(MINERAL_SPRITE);
@@ -75,8 +75,8 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
     let obstacle_handle = asset_server.load(OBSTACLE_SPRITE);
 
     // Dimensions de la carte
-    let largeur = 50;
-    let hauteur = 50;
+    let largeur = size_map_res.length.unwrap_or(50); 
+    let hauteur = size_map_res.height.unwrap_or(50);  
 
     // Créer l'entité de la carte avec sa position de base
     commands.spawn((Carte { largeur, hauteur }, Position { x: 0, y: 0 }));
