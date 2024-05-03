@@ -1,11 +1,5 @@
 use bevy::{input::mouse::MouseWheel, prelude::*, window::WindowMode};
 
-enum ResolutionOption {
-    Resolution1280x720,
-    Resolution1920x1080,
-    CustomResolution(f32, f32),
-}
-
 /***
  * Fonction pour la caméra
  */

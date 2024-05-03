@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use rand::Rng;
-use crate::{update_text, CompteurRobotsSpawn, VitesseGlobale};
+use crate::systems::update_text;
+use crate::components::{CompteurRobotsSpawn, VitesseGlobale};
 
-use super::{Base, Carte, Compteur, ElementCarte, ElementMap, EtatDecouverte, Position, Ressource, TexteEnergie, TexteMinerai, TexteVitesse};
+use super::{Base, Carte, Compteur, ElementCarte, ElementMap, EtatDecouverte, Position, Ressource, SizeMap, TexteEnergie, TexteMinerai, TexteVitesse};
 
 const ROBOT_SPRITE: &str = "textures/robot.png";
 
@@ -22,14 +23,14 @@ pub enum RobotState {
 
 #[derive(Component, Debug)]
 pub struct Robot {
-    id: u32,
-    nom: String,
-    pv_max: i32,
-    type_robot: TypeRobot,
-    vitesse: u32,
-    timer: f32,
-    target_position: Option<Position>,
-    steps_moved: u32,
+    pub id: u32,
+    pub nom: String,
+    pub pv_max: i32,
+    pub type_robot: TypeRobot,
+    pub vitesse: u32,
+    pub timer: f32,
+    pub target_position: Option<Position>,
+    pub steps_moved: u32,
 }
 
 /***
@@ -40,7 +41,8 @@ pub fn spawn_robots(
     asset_server: Res<AssetServer>,
     base_query: Query<(&Base, &Position)>,
     vitesse_globale: Res<VitesseGlobale>,
-    compteur_robots_spawn: Res<CompteurRobotsSpawn>
+    compteur_robots_spawn: Res<CompteurRobotsSpawn>,
+    size_map_res: Res<SizeMap>,
 ) {   
     let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
 
@@ -59,8 +61,8 @@ pub fn spawn_robots(
             };
 
             // Cible aléatoire sur la map pour les robots
-            let target_x: i32 = rand::thread_rng().gen_range(0..50) as i32;
-            let target_y: i32 = rand::thread_rng().gen_range(0..50) as i32;
+            let target_x: i32 = rand::thread_rng().gen_range(0..size_map_res.length.unwrap_or(50)) as i32;
+            let target_y: i32 = rand::thread_rng().gen_range(0..size_map_res.height.unwrap_or(50)) as i32;
 
             let timer = 5.0 / (vitesse * vitesse_globale.vitesse) as f32;
 

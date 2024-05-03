@@ -9,6 +9,12 @@ pub struct SeedResource {
 }
 
 #[derive(Resource, Debug)]
+pub struct SizeMap {
+    pub length: Option<u32>,
+    pub height: Option<u32>
+}
+
+#[derive(Resource, Debug)]
 pub struct Compteur {
    pub minerai: u32,
    pub energie: u32
