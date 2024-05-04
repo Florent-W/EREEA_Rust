@@ -118,8 +118,8 @@ pub fn move_robots_on_map_system(
         &mut RobotState,
     )>,
     carte_query: Query<&Carte>,
-    base_query: Query<(&Base, &Position), Without<Robot>>, // Exclure les Robots ici
-    element_carte_query: Query<(&ElementCarte, &Position), Without<Robot>>, // Exclure les Robots ici
+    base_query: Query<(&Base, &Position), Without<Robot>>, 
+    element_carte_query: Query<(&ElementCarte, &Position), Without<Robot>>,
     time: Res<Time>,
     vitesse_globale: Res<VitesseGlobale>,
 ) {
@@ -135,30 +135,24 @@ pub fn move_robots_on_map_system(
                 if robot.timer <= 0.0 {
                     if let Some(target_position) = &robot.target_position {
                         if *position != *target_position {
-                            // Vérifie si la position suivante est un obstacle
-                            let next_x = (position.x + (target_position.x - position.x).signum())
-                                % carte.largeur as i32;
-                            let next_y = (position.y + (target_position.y - position.y).signum())
-                                % carte.hauteur as i32;
-                            let next_position = Position {
-                                x: next_x,
-                                y: next_y,
-                            };
+                            // Calculer la direction de déplacement et ajuster pour bouclage
+                            let dx = (target_position.x - position.x).signum();
+                            let dy = (target_position.y - position.y).signum();
+                            let next_x = (position.x + dx + carte.largeur as i32) % carte.largeur as i32;
+                            let next_y = (position.y + dy + carte.hauteur as i32) % carte.hauteur as i32;
+                            let next_position = Position { x: next_x, y: next_y };
 
+                            // Vérification les obstacles avant de se déplacer
                             if element_carte_query.iter().any(|(elem, pos)| {
-                                *pos == next_position
-                                    && matches!(
-                                        elem.element,
-                                        ElementMap::Ressource(Ressource::Obstacle)
-                                    )
+                                *pos == next_position && matches!(elem.element, ElementMap::Ressource(Ressource::Obstacle))
                             }) {
-                                // Trouve une nouvelle direction aléatoire pour éviter l'obstacle
+                                // Changer la cible si un obstacle est trouvé
                                 robot.target_position = Some(Position {
                                     x: rand::thread_rng().gen_range(0..carte.largeur) as i32,
                                     y: rand::thread_rng().gen_range(0..carte.hauteur) as i32,
                                 });
                             } else {
-                                // Déplace normalement si aucune obstacle n'est détecté
+                                // Déplacement du robot
                                 position.x = next_x;
                                 position.y = next_y;
                                 robot.steps_moved += 1;
@@ -174,13 +168,13 @@ pub fn move_robots_on_map_system(
                 }
             }
             RobotState::Returning => {
-                // Logique pour le retour à la base
+                // Logique pour le retour à la base en bouclant autour de la carte
                 if robot.timer <= 0.0 {
                     if *position != *base_pos {
-                        position.x = (position.x + (base_pos.x - position.x).signum())
-                            % carte.largeur as i32;
-                        position.y = (position.y + (base_pos.y - position.y).signum())
-                            % carte.hauteur as i32;
+                        let dx = (base_pos.x - position.x).signum();
+                        let dy = (base_pos.y - position.y).signum();
+                        position.x = (position.x + dx + carte.largeur as i32) % carte.largeur as i32;
+                        position.y = (position.y + dy + carte.hauteur as i32) % carte.hauteur as i32;
                     } else {
                         *state = RobotState::AtBase;
                         robot.timer = 5.0; // Attente à la base
@@ -189,7 +183,6 @@ pub fn move_robots_on_map_system(
                 }
             }
             RobotState::AtBase => {
-                // Logique pour envoyer le robot explorer à nouveau
                 if robot.timer <= 0.0 {
                     let target_x = rand::thread_rng().gen_range(0..carte.largeur) as i32;
                     let target_y = rand::thread_rng().gen_range(0..carte.hauteur) as i32;
@@ -198,7 +191,6 @@ pub fn move_robots_on_map_system(
                         y: target_y,
                     });
                     robot.steps_moved = 0;
-
                     *state = RobotState::Exploring;
                     robot.timer = 1.0 / (robot.vitesse * vitesse_globale.vitesse) as f32;
                 }
@@ -268,6 +260,7 @@ pub fn collect_resources_system(
                             compteur.energie += 1;
                             commands.entity(entity).despawn();
                             update_text(&compteur, &mut query_energie, &mut query_minerai);
+                            encaissement_audio(&asset_server, &audio);
                         }
                         ElementMap::Ressource(Ressource::Mineral) => {
                             compteur.minerai += 1;
@@ -332,14 +325,13 @@ pub fn assign_targets(
  * Fonction qui découvre les cases lorsqu'un robot est à la base
  */
 pub fn discover_elements(
-    mut commands: Commands,
-    robot_query: Query<(&Robot, &RobotState)>, // Include Robot component to access the ID
+    robot_query: Query<(&Robot, &RobotState)>, 
     mut elements_query: Query<(&mut ElementCarte, &Position)>,
 ) {
-    // Iterate over robots to find those at the base
+    // On met à jour quand les robots sont à la base
     for (robot, state) in robot_query.iter() {
         if matches!(state, RobotState::AtBase) {
-            // Check each element to see if it was discovered by the robot that is at the base
+            // On regarde si c'est le robot qui est dans la base qui a découvert la case
             for (mut element_carte, _) in elements_query.iter_mut() {
                 if element_carte.est_decouvert == EtatDecouverte::EnAttente && element_carte.decouvert_robot_id == Some(robot.id) {
                     element_carte.est_decouvert = EtatDecouverte::Decouvert;

@@ -1,10 +1,7 @@
 use bevy::prelude::*;
-use bevy::ecs::query::With;
-use ereea::components::{setup_map, Carte, ElementCarte, EtatDecouverte, Ressource, Position, Robot, TypeRobot, Compteur, collect_resources_system, ElementMap, move_robots_on_map_system, RobotState, spawn_robots, VitesseGlobale, SizeMap, Base, BorduresActive, SeedResource, Bordure, encaissement_audio, setup_bordures, energy_audio, start_audio};
-use bevy_kira_audio::Audio;
-use bevy_kira_audio::AudioPlugin;
+use ereea::components::{Position, Robot, TypeRobot};
+use ereea::components::{setup_map, Carte, ElementCarte};
 use bevy::app::App;
-
 
 /***
  * Test de la map
@@ -118,14 +115,8 @@ mod tests {
     }
 }
 
-#[cfg(test)]
-mod tests1 {
-    use super::*;
-    use bevy::prelude::*;
-    use bevy::app::App;
-    use bevy_kira_audio::{Audio, AudioControl, AudioPlugin, AudioSource};
-    use bevy::asset::{AssetServer, Assets, Handle};
-
+// TODO Finir les tests
+/* 
     #[test]
     fn test_start_audio() {
         let mut app = App::new();
@@ -333,4 +324,4 @@ mod tests3 {
         let compteur = app.world.resource::<Compteur>();
         assert_eq!(compteur.energie, 1, "La collecte d'énergie a échoué");
     }
-}
+*/

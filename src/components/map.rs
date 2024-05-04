@@ -130,7 +130,7 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
                 decouvert_robot_id: None,
             }).insert(position.clone());
 
-            // DAjout des ressources
+            // Ajout des ressources
             if let Some((element_res, texture_or_color_res, taille_res)) = match noise_normalised {
                 n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), TextureOrColor::Texture(obstacle_handle.clone()), 0.0015)),
                 n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), TextureOrColor::Texture(energie_texture_handle.clone()), 0.0015)),
