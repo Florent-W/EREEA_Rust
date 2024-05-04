@@ -5,12 +5,29 @@ mod systems;
 
 use bevy::window::WindowMode;
 use bevy::prelude::*;
+// use image::io::Reader as ImageReader;
+// use image::ImageFormat;
+// use std::fs::File;
+// use std::io::BufReader;
 use components::{assign_targets, collect_resources_system, discover_elements, move_robots_on_map_system, setup_bordures, setup_map, spawn_robots, update_robot_state, AffichageCasesNonDecouvertes, BorduresActive, Compteur, SeedResource, SizeMap, VitesseGlobale};
 use systems::utilities::{request_nb_robots, request_seed_from_user};
 
 use crate::systems::*;
 
 fn main() {
+
+    // let file = File::open("../icon.png").expect("Failed to open icon file");
+    // let reader = BufReader::new(file);
+    // let icon_img = ImageReader::with_format(reader, ImageFormat::Png)
+    //     .decode()
+    //     .expect("Failed to decode icon")
+    //     .into_rgba8();
+
+    // let icon = bevy::window::Icon {
+    //     width: icon_img.width() as u32,
+    //     height: icon_img.height() as u32,
+    //     data: icon_img.into_raw(),
+    // };
     let seed_option = request_seed_from_user();
     let (width, height) = request_resolution_from_user();
     let nb_robots = request_nb_robots();
@@ -23,6 +40,8 @@ fn main() {
                     title: "Essaim de Robots pour Exploration et Etude Astrobiologique".to_string(),
                     mode: WindowMode::Windowed,
                     resolution: (width, height).into(),
+                    //ajout normalement de l'icone
+                    //icon: Some(icon),
                     ..default()
                 }),
                 ..default()
