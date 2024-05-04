@@ -31,6 +31,7 @@ pub struct Bordure;
 pub struct ElementCarte {
     pub element: ElementMap,
     pub est_decouvert: EtatDecouverte,
+    pub decouvert_robot_id: Option<u32>,
 }
 
 #[derive(Component, Debug)]
@@ -126,6 +127,7 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
             commands.spawn(sprite_bundle_geo).insert(ElementCarte {
                 element: element_geo,
                 est_decouvert: EtatDecouverte::NonDecouvert,
+                decouvert_robot_id: None,
             }).insert(position.clone());
 
             // DAjout des ressources
@@ -148,6 +150,7 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
                 commands.spawn(sprite_bundle_res).insert(ElementCarte {
                     element: element_res,
                     est_decouvert: EtatDecouverte::NonDecouvert,
+                    decouvert_robot_id: None,
                 }).insert(position.clone());
             }
         }
