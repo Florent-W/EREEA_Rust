@@ -7,9 +7,9 @@ pub fn start_audio(
     asset_server: Res<AssetServer>,
     audio: ResMut<Audio>,
 ) {
-    let music_handle: Handle<AudioSource> = asset_server.load("music.ogg");
+    let music_handle: Handle<AudioSource> = asset_server.load("musics/evolution.ogg");
 
-    audio.set_volume(0.4); 
+    audio.set_volume(0.12); 
     audio.play(music_handle).looped(); 
 }
 
@@ -17,7 +17,7 @@ pub fn encaissement_audio(
     asset_server: &Res<AssetServer>,
     audio: &Res<Audio>,
 ) {
-    let effect_handle: Handle<AudioSource> = asset_server.load("encaissement.ogg"); 
-    audio.play(effect_handle).with_volume(0.1); 
+    let effect_handle: Handle<AudioSource> = asset_server.load("musics/encaissement.ogg"); 
+    audio.play(effect_handle).with_volume(0.5); 
 }
 
