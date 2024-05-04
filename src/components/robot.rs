@@ -1,9 +1,12 @@
+use crate::components::VitesseGlobale;
+use crate::systems::update_text;
 use bevy::prelude::*;
 use rand::Rng;
-use crate::systems::update_text;
-use crate::components::{CompteurRobotsSpawn, VitesseGlobale};
 
-use super::{Base, Carte, Compteur, ElementCarte, ElementMap, EtatDecouverte, Position, Ressource, SizeMap, TexteEnergie, TexteMinerai, TexteVitesse};
+use super::{
+    Base, Carte, Compteur, ElementCarte, ElementMap, EtatDecouverte, Position, Ressource, SizeMap,
+    TexteEnergie, TexteMinerai, TexteVitesse,
+};
 
 const ROBOT_SPRITE: &str = "textures/robot.png";
 
@@ -36,70 +39,68 @@ pub struct Robot {
 /***
  * Fonction d'ajout des robots sur la carte
  */
-pub fn spawn_robots(
+pub fn spawn_robots (
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     base_query: Query<(&Base, &Position)>,
     vitesse_globale: Res<VitesseGlobale>,
-    compteur_robots_spawn: Res<CompteurRobotsSpawn>,
     size_map_res: Res<SizeMap>,
-) {   
-    let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
-
+    mut compteur_res: ResMut<Compteur>,
+) {
     if let Some((_, base_position)) = base_query.iter().next() {
-        for id in 1..=compteur_robots_spawn.nombre {
-            let (type_robot, color, vitesse) = match id % 3 {
+        if compteur_res.minerai >= 5 && compteur_res.energie >= 3 {
+            compteur_res.minerai -= 5;
+            compteur_res.energie -= 3;
+
+            let robot_texture_handle = asset_server.load(ROBOT_SPRITE);
+            compteur_res.total_robots += 1;
+            let robot_id = compteur_res.total_robots;
+
+            let (type_robot, color, vitesse) = match robot_id % 3 {
                 0 => (TypeRobot::Explorateur, Some(Color::rgb(0.0, 1.0, 0.0)), 2),
                 1 => (TypeRobot::Collecteur, Some(Color::rgb(0.0, 0.0, 1.0)), 1),
                 _ => (TypeRobot::Visiteur, None, 1),
             };
 
-            let robot_name = match type_robot {
-                TypeRobot::Explorateur => format!("Explorateur{}", id),
-                TypeRobot::Collecteur => format!("Collecteur{}", id),
-                TypeRobot::Visiteur => format!("Visiteur{}", id),
-            };
-
+            let robot_name = format!("{:?}{}", type_robot, robot_id);
+            
             // Cible aléatoire sur la map pour les robots
-            let target_x: i32 = rand::thread_rng().gen_range(0..size_map_res.length.unwrap_or(50)) as i32;
-            let target_y: i32 = rand::thread_rng().gen_range(0..size_map_res.height.unwrap_or(50)) as i32;
-
+            let target_x = rand::thread_rng().gen_range(0..size_map_res.length.unwrap_or(50)) as i32;
+            let target_y = rand::thread_rng().gen_range(0..size_map_res.height.unwrap_or(50)) as i32;
             let timer = 5.0 / (vitesse * vitesse_globale.vitesse) as f32;
 
-            commands
-                .spawn(SpriteBundle {
-                    texture: robot_texture_handle.clone(),
-                    sprite: Sprite {
-                        color: color.unwrap_or(Color::WHITE),
-                        ..Default::default()
-                    },
-                    transform: Transform::from_translation(Vec3::new(
-                        base_position.x as f32,
-                        base_position.y as f32,
-                        1.0,
-                    ))
-                    .with_scale(Vec3::splat(0.003)),
+            commands.spawn(SpriteBundle {
+                texture: robot_texture_handle,
+                sprite: Sprite {
+                    color: color.unwrap_or(Color::WHITE),
                     ..Default::default()
-                })
-                .insert(Robot {
-                    id: id,
-                    nom: robot_name,
-                    pv_max: 100,
-                    type_robot: type_robot,
-                    vitesse: vitesse,
-                    timer: timer,
-                    target_position: Some(Position {
-                        x: target_x,
-                        y: target_y,
-                    }),
-                    steps_moved: 0,
-                })
-                .insert(Position {
-                    x: base_position.x,
-                    y: base_position.y,
-                })
-                .insert(RobotState::AtBase);
+                },
+                transform: Transform::from_translation(Vec3::new(
+                    base_position.x as f32,
+                    base_position.y as f32,
+                    1.0,
+                ))
+                .with_scale(Vec3::splat(0.003)),
+                ..Default::default()
+            }).insert(Robot {
+                id: robot_id,
+                nom: robot_name,
+                pv_max: 100,
+                type_robot: type_robot,
+                vitesse: vitesse,
+                timer: timer,
+                target_position: Some(Position {
+                    x: target_x,
+                    y: target_y,
+                }),
+                steps_moved: 0,
+            }).insert(Position {
+                x: base_position.x,
+                y: base_position.y,
+            }).insert(RobotState::AtBase);
         }
+    } else {
+        eprintln!("Pas de base trouvée donc le robot ne peut pas être créé.");
     }
 }
 
@@ -118,7 +119,7 @@ pub fn move_robots_on_map_system(
     base_query: Query<(&Base, &Position), Without<Robot>>, // Exclure les Robots ici
     element_carte_query: Query<(&ElementCarte, &Position), Without<Robot>>, // Exclure les Robots ici
     time: Res<Time>,
-    vitesse_globale: Res<VitesseGlobale>
+    vitesse_globale: Res<VitesseGlobale>,
 ) {
     let delta = time.delta_seconds();
     let carte = carte_query.single();
@@ -234,46 +235,51 @@ pub fn collect_resources_system(
     mut commands: Commands,
     mut robot_query: Query<(Entity, &mut Robot, &Position)>,
     mut element_carte_query: Query<(Entity, &mut ElementCarte, &Position)>,
-    mut query_energie: Query<&mut Text, (With<TexteEnergie>, Without<TexteMinerai>, Without<TexteVitesse>)>,
-    mut query_minerai: Query<&mut Text, (With<TexteMinerai>, Without<TexteEnergie>, Without<TexteVitesse>)>,
+    mut query_energie: Query<
+        &mut Text,
+        (
+            With<TexteEnergie>,
+            Without<TexteMinerai>,
+            Without<TexteVitesse>,
+        ),
+    >,
+    mut query_minerai: Query<
+        &mut Text,
+        (
+            With<TexteMinerai>,
+            Without<TexteEnergie>,
+            Without<TexteVitesse>,
+        ),
+    >,
     mut compteur: ResMut<Compteur>,
 ) {
     for (_robot_entity, robot, robot_position) in robot_query.iter_mut() {
-        // println!("{:?}", robot.type_robot);
         if robot.type_robot == TypeRobot::Collecteur {
-       // println!("Checking robot {} at position {:?}", robot.nom, robot_position); 
-        let mut resource_collected = false; 
-        for (entity, mut element_carte, resource_position) in element_carte_query.iter_mut() {
-            if robot_position == resource_position {
-                resource_collected = true; // La ressource a été trouvée à la même position que le robot
-                match element_carte.element {
-                    ElementMap::Ressource(Ressource::Energie) => {
-                      //  println!("Robot {} collected energy at position {:?}", robot.nom, robot_position);
-                        compteur.energie += 1;
-                        commands.entity(entity).despawn();
-                        update_text(&compteur, &mut query_energie, &mut query_minerai);
+            let mut resource_collected = false;
+            for (entity, mut element_carte, resource_position) in element_carte_query.iter_mut() {
+                if robot_position == resource_position {
+                    resource_collected = true; // La ressource a été trouvée à la même position que le robot
+                    match element_carte.element {
+                        ElementMap::Ressource(Ressource::Energie) => {
+                            compteur.energie += 1;
+                            commands.entity(entity).despawn();
+                            update_text(&compteur, &mut query_energie, &mut query_minerai);
+                        }
+                        ElementMap::Ressource(Ressource::Mineral) => {
+                            compteur.minerai += 1;
+                            commands.entity(entity).despawn();
+                            update_text(&compteur, &mut query_energie, &mut query_minerai);
+                        }
+                        ElementMap::Ressource(Ressource::LieuInteretScientifique) => {}
+                        _ => {}
                     }
-                    ElementMap::Ressource(Ressource::Mineral) => {
-                      //  println!("Robot {} collected mineral at position {:?}", robot.nom, robot_position); 
-                        compteur.minerai += 1;
-                        commands.entity(entity).despawn();
-                        update_text(&compteur, &mut query_energie, &mut query_minerai);
+                    if element_carte.est_decouvert == EtatDecouverte::NonDecouvert {
+                        element_carte.est_decouvert = EtatDecouverte::EnAttente;
                     }
-                    ElementMap::Ressource(Ressource::LieuInteretScientifique) => {
-                      //  println!("Robot {} discovered a place of interest at position {:?}", robot.nom, robot_position); 
-                    }
-                    _ => {
-                    }
-                }
-                if element_carte.est_decouvert == EtatDecouverte::NonDecouvert {
-                    element_carte.est_decouvert = EtatDecouverte::EnAttente;
                 }
             }
+            if !resource_collected {}
         }
-        if !resource_collected {
-            // println!("Robot {} did not collect any resources at position {:?}", robot.nom, robot_position);
-        }
-    }
     }
 }
 
@@ -283,7 +289,7 @@ pub fn collect_resources_system(
 pub fn assign_targets(
     mut query: Query<(&mut Robot, &Position)>,
     map_query: Query<&Carte>,
-    element_carte_query: Query<(&ElementCarte, &Position)>, 
+    element_carte_query: Query<(&ElementCarte, &Position)>,
 ) {
     if let Ok(_carte) = map_query.get_single() {
         for (mut robot, _robot_pos) in query.iter_mut() {

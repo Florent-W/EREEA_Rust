@@ -4,7 +4,7 @@ use rand::Rng;
 use crate::systems::camera::setup_camera;
 use crate::components::SeedResource;
 
-use super::{Ressource, SizeMap};
+use super::{BorduresActive, Ressource, SizeMap};
 
 const ENERGIE_SPRITE: &str = "textures/energie.png";
 const MINERAL_SPRITE: &str = "textures/minerai.png";
@@ -25,7 +25,7 @@ pub struct Position {
 }
 
 #[derive(Component, Debug)]
-struct Bordure;
+pub struct Bordure;
 
 #[derive(Component, Debug)]
 pub struct ElementCarte {
@@ -150,7 +150,6 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
                         texture: texture_handle,
                         transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
                             .with_scale(Vec3::splat(taille)),
-                        visibility: Visibility::Visible,
                         ..Default::default()
                     },
                     TextureOrColor::Color(color) => SpriteBundle {
@@ -160,7 +159,6 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
                         },
                         transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
                             .with_scale(Vec3::splat(taille)),
-                        visibility: Visibility::Visible,
                         ..Default::default()
                     },
                 };
@@ -197,7 +195,7 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
     commands
         .spawn(SpriteBundle {
             texture: base_handle,
-            transform: Transform::from_translation(Vec3::new(base_x as f32, base_y as f32, 0.0))
+            transform: Transform::from_translation(Vec3::new(base_x as f32, base_y as f32, 0.9))
                 .with_scale(Vec3::splat(0.002)),
             ..Default::default()
         })
@@ -214,12 +212,15 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
 /***
 * Fonction pour ajouter les bordures
 */
-pub fn setup_bordures(mut commands: Commands, query: Query<(&Carte, &Position)>) {
+pub fn setup_bordures(mut commands: Commands, query: Query<(&Carte, &Position)>, bordures_active: ResMut<BorduresActive>) {
+    if !bordures_active.0 {
+        return;
+    }
+
    for (carte, carte_position) in query.iter() {
        let bordure_couleur = Color::BLACK;
        let epaisseur_bordure = 0.05;
        let taille_case = 1.0;
-       println!("{}", carte.hauteur);
        for y in 0..carte.hauteur {
            for x in 0..carte.largeur {
                let x_pos = x as f32 + carte_position.x as f32 * taille_case;
@@ -234,8 +235,9 @@ pub fn setup_bordures(mut commands: Commands, query: Query<(&Carte, &Position)>)
                            ..Default::default()
                        },
                        transform: Transform::from_xyz(x_pos + 0.5 * taille_case, y_pos, 2.0),
+                       visibility: Visibility::Visible,
                        ..Default::default()
-                   });
+                   }).insert(Bordure);
                }
 
                // Créer les bordures horizontales
@@ -247,8 +249,9 @@ pub fn setup_bordures(mut commands: Commands, query: Query<(&Carte, &Position)>)
                            ..Default::default()
                        },
                        transform: Transform::from_xyz(x_pos, y_pos + 0.5 * taille_case, 2.0),
+                       visibility: Visibility::Visible,
                        ..Default::default()
-                   });
+                   }).insert(Bordure);
                }
            }
        }

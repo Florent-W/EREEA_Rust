@@ -4,6 +4,9 @@ use bevy::prelude::*;
 pub struct AffichageCasesNonDecouvertes(pub bool);
 
 #[derive(Resource, Debug)]
+pub struct BorduresActive(pub bool);
+
+#[derive(Resource, Debug)]
 pub struct SeedResource {
     pub seed: Option<u32>,
 }
@@ -17,17 +20,13 @@ pub struct SizeMap {
 #[derive(Resource, Debug)]
 pub struct Compteur {
    pub minerai: u32,
-   pub energie: u32
+   pub energie: u32,
+   pub total_robots: u32,
 }
 
 #[derive(Resource, Debug)]
 pub struct VitesseGlobale {
     pub vitesse: u32
-}
-
-#[derive(Resource, Debug)]
-pub struct CompteurRobotsSpawn {
-    pub nombre: u32
 }
 
 #[derive(Component, Debug, PartialEq)]
