@@ -73,4 +73,8 @@
 - Ajout de l'élément montagne
 - Correction du placement de la base
 - Les élements géographiques peuvent se mettent sur une case ou il y a déjà une ressource
+- Ajout d'une musique de fond et de bruitage
+- Ajout de tests unitaires
+- Ajout d'ADR
+- Correction des cases découvertes par tous les robots pas encore revenu au lieu du robot qui a été sur la case et vient de revenir 
 - Sortie du projet

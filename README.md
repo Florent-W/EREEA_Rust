@@ -47,3 +47,6 @@ Une légende est également indiqué à gauche de la carte.
 ## Stack
 - Rust
 - Bevy
+
+## Explications
+- Les robots Explorateur vont parcourir la carte, en revenant à la base, ils enregistrent leur progression, dévoilant petit à petit la carte. Les robots collecteurs vont pouvoir collecter les ressources qui vont permettre de créer des nouveaux robots à la base. Le type du robot à la création est désigné au hasard. Les robots ont également plusieurs états : Quand ils sont à la base, ils vont calculer une position au hasard sur la carte qui n'a pas encore été déverouillée, ils vont essayer de ne pas rencontrer d'obstacles et une fois la cible atteinte, ils vont revenir à la base où ils attendront 5 secondes avant de repartir vers une nouvelle cible.
