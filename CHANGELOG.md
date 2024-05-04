@@ -70,4 +70,7 @@
 ## 1.0
 - Possibilité d'activer les bordures
 - Création de robot automatique avec l'utilisation des ressources
+- Ajout de l'élément montagne
+- Correction du placement de la base
+- Les élements géographiques peuvent se mettent sur une case ou il y a déjà une ressource
 - Sortie du projet

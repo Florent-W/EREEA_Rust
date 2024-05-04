@@ -48,6 +48,7 @@ pub enum ElementGeographique {
     Terre,
     Eau,
     Sable,
+    Montagne,
 }
 
 #[derive(Component, Debug, PartialEq)]
@@ -99,77 +100,55 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
             let noise_value = perlin.get([x as f64 * 0.08, y as f64 * 0.08]);
             let noise_normalised = (noise_value + 1.0) / 2.0;
 
-            // Déterminer quel type de ressource générer en fonction de la valeur du bruit
-            let sprite = match noise_normalised {
-                n if n > 0.8 => Some((
-                    ElementMap::Ressource(Ressource::Obstacle),
-                    TextureOrColor::Texture(obstacle_handle.clone()),
-                    0.0015,
-                )),
-                n if n > 0.75 => Some((
-                    ElementMap::Ressource(Ressource::Energie),
-                    TextureOrColor::Texture(energie_texture_handle.clone()),
-                    0.0015,
-                )),
-                n if n > 0.72 => Some((
-                    ElementMap::Ressource(Ressource::Mineral),
-                    TextureOrColor::Texture(mineral_texture_handle.clone()),
-                    0.0012,
-                )),
-                n if n > 0.7 => Some((
-                    ElementMap::Ressource(Ressource::LieuInteretScientifique),
-                    TextureOrColor::Texture(lieu_interet_texture_handle.clone()),
-                    0.0015,
-                )),
-                n if n >= 0.6 => Some((
-                    ElementMap::ElementGeographique(ElementGeographique::Herbe),
-                    TextureOrColor::Color(Color::rgb(0.5, 0.75, 0.3)),
-                    1.0,
-                )),
-                n if n > 0.4 && n < 0.6 => Some((
-                    ElementMap::ElementGeographique(ElementGeographique::Terre),
-                    TextureOrColor::Color(Color::rgb(0.69, 0.62, 0.541)),
-                    1.0,
-                )),
-                n if n > 0.2 && n <= 0.4 => Some((
-                    ElementMap::ElementGeographique(ElementGeographique::Sable),
-                    TextureOrColor::Color(Color::rgb(0.76, 0.69, 0.5)),
-                    1.0,
-                )),
-                n if n >= 0.0 => Some((
-                    ElementMap::ElementGeographique(ElementGeographique::Eau),
-                    TextureOrColor::Color(Color::rgb(0.4, 0.5, 0.8)),
-                    1.0,
-                )),
-                _ => None,
+            // Déterminer quel élément géographique générer en fonction de la valeur du bruit
+            let (element_geo, texture_or_color_geo, taille_geo) = if noise_normalised >= 0.8 {
+                    (ElementMap::ElementGeographique(ElementGeographique::Montagne), TextureOrColor::Color(Color::rgb(0.8, 0.8, 0.8)), 1.0)
+            }
+            else if noise_normalised >= 0.6 {
+                (ElementMap::ElementGeographique(ElementGeographique::Herbe), TextureOrColor::Color(Color::rgb(0.5, 0.75, 0.3)), 1.0)
+            } else if noise_normalised > 0.4 {
+                (ElementMap::ElementGeographique(ElementGeographique::Terre), TextureOrColor::Color(Color::rgb(0.69, 0.62, 0.541)), 1.0)
+            } else if noise_normalised > 0.2 {
+                (ElementMap::ElementGeographique(ElementGeographique::Sable), TextureOrColor::Color(Color::rgb(0.76, 0.69, 0.5)), 1.0)
+            } else {
+                (ElementMap::ElementGeographique(ElementGeographique::Eau), TextureOrColor::Color(Color::rgb(0.4, 0.5, 0.8)), 1.0)
             };
 
-            if let Some((element, texture_or_color, taille)) = sprite {
-                let sprite_bundle = match texture_or_color {
-                    TextureOrColor::Texture(texture_handle) => SpriteBundle {
-                        texture: texture_handle,
-                        transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
-                            .with_scale(Vec3::splat(taille)),
-                        ..Default::default()
+            let sprite_bundle_geo = SpriteBundle {
+                sprite: Sprite { color: match texture_or_color_geo {
+                    TextureOrColor::Color(color) => color,
+                    _ => Color::WHITE
+                }, ..Default::default() },
+                transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0)).with_scale(Vec3::splat(taille_geo)),
+                ..Default::default()
+            };
+
+            commands.spawn(sprite_bundle_geo).insert(ElementCarte {
+                element: element_geo,
+                est_decouvert: EtatDecouverte::NonDecouvert,
+            }).insert(position.clone());
+
+            // DAjout des ressources
+            if let Some((element_res, texture_or_color_res, taille_res)) = match noise_normalised {
+                n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), TextureOrColor::Texture(obstacle_handle.clone()), 0.0015)),
+                n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), TextureOrColor::Texture(energie_texture_handle.clone()), 0.0015)),
+                n if n > 0.72 => Some((ElementMap::Ressource(Ressource::Mineral), TextureOrColor::Texture(mineral_texture_handle.clone()), 0.0012)),
+                n if n > 0.7 => Some((ElementMap::Ressource(Ressource::LieuInteretScientifique), TextureOrColor::Texture(lieu_interet_texture_handle.clone()), 0.0015)),
+                _ => None,
+            } {
+                let sprite_bundle_res = SpriteBundle {
+                    texture: match texture_or_color_res {
+                        TextureOrColor::Texture(texture_handle) => texture_handle,
+                        _ => continue, 
                     },
-                    TextureOrColor::Color(color) => SpriteBundle {
-                        sprite: Sprite {
-                            color,
-                            ..Default::default()
-                        },
-                        transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
-                            .with_scale(Vec3::splat(taille)),
-                        ..Default::default()
-                    },
+                    transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.1)).with_scale(Vec3::splat(taille_res)),
+                    ..Default::default()
                 };
 
-                commands
-                    .spawn(sprite_bundle)
-                    .insert(ElementCarte {
-                        element,
-                        est_decouvert: EtatDecouverte::NonDecouvert,
-                    })
-                    .insert(position);
+                commands.spawn(sprite_bundle_res).insert(ElementCarte {
+                    element: element_res,
+                    est_decouvert: EtatDecouverte::NonDecouvert,
+                }).insert(position.clone());
             }
         }
     }
@@ -186,7 +165,7 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
         let noise_normalised = (noise_value + 1.0) / 2.0;
 
         // Vérifie si la position n'est pas un obstacle
-        if noise_normalised <= 0.8 {
+        if  noise_normalised >= 0.2 && noise_normalised <= 0.5 {
             break;
         }
     }
