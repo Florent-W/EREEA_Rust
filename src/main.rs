@@ -4,12 +4,9 @@ mod components;
 mod systems;
 
 use bevy::window::WindowMode;
+use bevy_kira_audio::prelude::*;
 use bevy::prelude::*;
-// use image::io::Reader as ImageReader;
-// use image::ImageFormat;
-// use std::fs::File;
-// use std::io::BufReader;
-use components::{assign_targets, collect_resources_system, discover_elements, move_robots_on_map_system, setup_bordures, setup_map, spawn_robots, update_robot_state, AffichageCasesNonDecouvertes, BorduresActive, Compteur, SeedResource, SizeMap, VitesseGlobale};
+use components::{assign_targets, collect_resources_system, discover_elements, move_robots_on_map_system, setup_bordures, setup_map, spawn_robots, update_robot_state, start_audio,  AffichageCasesNonDecouvertes, BorduresActive, Compteur, SeedResource, SizeMap, VitesseGlobale};
 use systems::utilities::{request_nb_robots, request_seed_from_user};
 
 use crate::systems::*;
@@ -47,6 +44,8 @@ fn main() {
                 ..default()
             }),
         )
+        .add_plugins(AudioPlugin::default())
+        .add_systems(Startup, start_audio)
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))
         .insert_resource(VitesseGlobale { vitesse : 1 })
