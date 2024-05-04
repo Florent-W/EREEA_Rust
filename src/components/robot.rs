@@ -3,8 +3,7 @@ use crate::systems::update_text;
 use bevy_kira_audio::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
-use crate::components::audio::encaissement_audio;
-use crate::components::audio::energy_audio;
+use crate::systems::audio::encaissement_audio;
 
 use super::{
     Base, Carte, Compteur, ElementCarte, ElementMap, EtatDecouverte, Position, Ressource, SizeMap,
@@ -269,14 +268,12 @@ pub fn collect_resources_system(
                             compteur.energie += 1;
                             commands.entity(entity).despawn();
                             update_text(&compteur, &mut query_energie, &mut query_minerai);
-                            energy_audio(&asset_server, &audio);
                         }
                         ElementMap::Ressource(Ressource::Mineral) => {
                             compteur.minerai += 1;
                             commands.entity(entity).despawn();
                             update_text(&compteur, &mut query_energie, &mut query_minerai);
                             encaissement_audio(&asset_server, &audio);
-
                         }
                         ElementMap::Ressource(Ressource::LieuInteretScientifique) => {}
                         _ => {}
