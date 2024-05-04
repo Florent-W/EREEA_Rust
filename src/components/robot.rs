@@ -260,6 +260,7 @@ pub fn collect_resources_system(
                             compteur.energie += 1;
                             commands.entity(entity).despawn();
                             update_text(&compteur, &mut query_energie, &mut query_minerai);
+                            encaissement_audio(&asset_server, &audio);
                         }
                         ElementMap::Ressource(Ressource::Mineral) => {
                             compteur.minerai += 1;

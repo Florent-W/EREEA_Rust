@@ -9,7 +9,7 @@ pub fn start_audio(
 ) {
     let music_handle: Handle<AudioSource> = asset_server.load("musics/evolution.ogg");
 
-    audio.set_volume(0.12); 
+    audio.set_volume(0.09); 
     audio.play(music_handle).looped(); 
 }
 
@@ -18,6 +18,6 @@ pub fn encaissement_audio(
     audio: &Res<Audio>,
 ) {
     let effect_handle: Handle<AudioSource> = asset_server.load("musics/encaissement.ogg"); 
-    audio.play(effect_handle).with_volume(0.5); 
+    audio.play(effect_handle).with_volume(0.4); 
 }
 
