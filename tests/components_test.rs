@@ -20,7 +20,7 @@ fn assert_map_system(mut query: Query<&mut Carte>, elements_query: Query<&Elemen
 
 #[cfg(test)]
 mod tests {
-    use ereea::components::setup_bordures;
+    use ereea::components::{setup_bordures, BorduresActive};
 
     use super::*;
 
@@ -91,6 +91,8 @@ mod tests {
     fn test_setup_bordures() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
+        app.add_plugins(AssetPlugin::default());
+        app.world.insert_resource(BorduresActive(true));
 
         app.world.spawn(SpriteBundle {
             sprite: Sprite {
