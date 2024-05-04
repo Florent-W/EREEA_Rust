@@ -9,7 +9,7 @@ use bevy::prelude::*;
 // use image::ImageFormat;
 // use std::fs::File;
 // use std::io::BufReader;
-use components::{assign_targets, collect_resources_system, discover_elements, move_robots_on_map_system, setup_bordures, setup_map, spawn_robots, update_robot_state, AffichageCasesNonDecouvertes, Compteur, CompteurRobotsSpawn, VitesseGlobale, SeedResource, SizeMap};
+use components::{assign_targets, collect_resources_system, discover_elements, move_robots_on_map_system, setup_bordures, setup_map, spawn_robots, update_robot_state, AffichageCasesNonDecouvertes, BorduresActive, Compteur, SeedResource, SizeMap, VitesseGlobale};
 use systems::utilities::{request_nb_robots, request_seed_from_user};
 
 use crate::systems::*;
@@ -52,15 +52,17 @@ fn main() {
         .insert_resource(VitesseGlobale { vitesse : 1 })
         .insert_resource(SeedResource { seed: seed_option })
         .insert_resource(SizeMap { length: size, height: size })
-        .insert_resource(Compteur { minerai: 0, energie: 0 })
-        .insert_resource(CompteurRobotsSpawn { nombre: nb_robots })
+        .insert_resource(BorduresActive(true))
+        // On fait spawn le nombre de ressources qu'il faut pour faire apparaitre le nombre de robots
+        .insert_resource(Compteur { minerai: 5 * nb_robots, energie: 3 * nb_robots, total_robots: 0 })
         .add_systems(Startup, setup_map)
         .add_systems(Startup, setup_ui)
         .add_systems(Startup, setup_legend)
         .add_systems(PostStartup, setup_bordures)
-        .add_systems(PostStartup, spawn_robots)
+        .add_systems(Update, spawn_robots)
         .add_systems(Update, move_robots_on_map_system)
         .add_systems(Update, toggle_cases_non_decouvertes)
+        .add_systems(Update, toggle_bordures)
         .add_systems(Update, toggle_vitesse)
         .add_systems(Update, toggle_fullscreen)
         .add_systems(Update, toggle_exit_game)

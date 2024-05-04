@@ -1,7 +1,7 @@
 use bevy::{app::AppExit, prelude::*};
 use std::io;
 
-use crate::components::{AffichageCasesNonDecouvertes, ElementCarte, EtatDecouverte};
+use crate::components::{AffichageCasesNonDecouvertes, Bordure, BorduresActive, ElementCarte, EtatDecouverte};
 
 /***
  * Fonction pour demander le nombre de robots à faire spawn
@@ -83,6 +83,27 @@ pub fn toggle_cases_non_decouvertes(
 }
 
 /***
+ * Fonction pour activer ou désactiver les bordures
+ */
+pub fn toggle_bordures(keyboard_input: Res<ButtonInput<KeyCode>>, 
+    mut query: Query<&mut Visibility, With<Bordure>>, 
+    mut bordures_active: ResMut<BorduresActive>) 
+    {
+        if keyboard_input.just_pressed(KeyCode::F3) {
+            bordures_active.0 = !bordures_active.0;
+            println!("Bordures activées : {}", bordures_active.0);
+    
+            for mut visibility in query.iter_mut() {
+                if bordures_active.0 {
+                    *visibility = Visibility::Visible;  // Rend les entités bordure visibles
+                } else {
+                    *visibility = Visibility::Hidden;  // Cache les entités
+                }
+            }
+        }
+}
+
+/***
  * Fonction qui change l'état des cases
  */
 pub fn adjust_visibility_system(
@@ -157,4 +178,3 @@ pub fn request_resolution_from_user() -> (f32, f32) {
         }
     }
 }
-
