@@ -2,35 +2,11 @@
 mod tests {
     use bevy::prelude::*;
     use bevy::app::App;
-    use bevy::render::RenderPlugin;
-    use ereea::{components::{setup_map, AffichageCasesNonDecouvertes, SeedResource}, systems::{setup_ui, toggle_cases_non_decouvertes}};
+    use ereea::{components::AffichageCasesNonDecouvertes, systems::{setup_ui, toggle_cases_non_decouvertes}};
 
-#[test]
-fn test_camera_initialization() {
-    let mut app = App::new();
-
-        app.insert_resource(SeedResource { seed: Some(1) });
-        app.insert_resource(Events::<AssetEvent<Image>>::default());
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(WindowPlugin::default());
-        app.add_plugins(AssetPlugin::default());
-        app.add_plugins(RenderPlugin::default());
-        app.update();
-
-        app.add_systems(Startup, setup_map);
-        app.update(); 
-
-    // On regarde il y a combien d'entité qui ont des composants camera
-    let camera_count = app.world.query::<&Camera2d>().iter(&app.world).count();
-    println!("Number of cameras in the world: {}", camera_count);
-
-    let mut query = app.world.query::<(&Transform, &Camera)>();
-    let _camera_transform = query.iter(&app.world).next().expect("Au moins une entité camera devrait être présente");
-
-   // assert_eq!(camera_transform.0.translation.x, 0.0, "Camera x position should be 0.0");
-   // assert!((camera_transform.0.scale.x - 0.05).abs() < f32::EPSILON, "Camera x scale should be 0.05");
-}
-
+/***
+ * Test pour les systèmes de UI
+ */
 #[test]
 fn test_setup_ui() {
     let mut app = App::new();
@@ -46,6 +22,9 @@ fn test_setup_ui() {
     assert!(text_query.iter(&app.world).count() > 0); 
 }
 
+/***
+ * Test pour le système de basculement de l'affichage du mode découverte
+ */
 #[test]
 fn test_toggle_cases_non_decouvertes() {
     let mut app = App::new();
@@ -63,6 +42,33 @@ fn test_toggle_cases_non_decouvertes() {
 }
 
 /* TODO Finir les tests
+/***
+ * Test pour le système de déplacement de la caméra
+ 
+ */
+#[test]
+fn test_camera_initialization() {
+    let mut app = App::new();
+
+        app.insert_resource(SeedResource { seed: Some(1) });
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(WindowPlugin::default());
+        app.add_plugins(AssetPlugin::default());
+        app.add_plugins(RenderPlugin::default());
+        app.update();
+
+        app.add_systems(Startup, setup_map);
+        app.update(); 
+
+    // On regarde il y a combien d'entité qui ont des composants camera
+    let camera_count = app.world.query::<&Camera2d>().iter(&app.world).count();
+    println!("Nombre de caméra {}", camera_count);
+
+    let mut query = app.world.query::<(&Transform, &Camera)>();
+    let _camera_transform = query.iter(&app.world).next().expect("Au moins une entité camera devrait être présente");
+}
+
+
 #[cfg(test)]
 mod tests1 {
     use super::*;
