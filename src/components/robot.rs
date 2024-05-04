@@ -332,14 +332,13 @@ pub fn assign_targets(
  * Fonction qui découvre les cases lorsqu'un robot est à la base
  */
 pub fn discover_elements(
-    mut commands: Commands,
-    robot_query: Query<(&Robot, &RobotState)>, // Include Robot component to access the ID
+    robot_query: Query<(&Robot, &RobotState)>, 
     mut elements_query: Query<(&mut ElementCarte, &Position)>,
 ) {
-    // Iterate over robots to find those at the base
+    // On met à jour quand les robots sont à la base
     for (robot, state) in robot_query.iter() {
         if matches!(state, RobotState::AtBase) {
-            // Check each element to see if it was discovered by the robot that is at the base
+            // On regarde si c'est le robot qui est dans la base qui a découvert la case
             for (mut element_carte, _) in elements_query.iter_mut() {
                 if element_carte.est_decouvert == EtatDecouverte::EnAttente && element_carte.decouvert_robot_id == Some(robot.id) {
                     element_carte.est_decouvert = EtatDecouverte::Decouvert;

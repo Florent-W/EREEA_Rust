@@ -1,4 +1,4 @@
-use bevy_kira_audio::{Audio, AudioChannel, AudioControl};
+use bevy_kira_audio::{Audio, AudioControl};
 use bevy_kira_audio::AudioSource;
 use bevy::prelude::*;
 
