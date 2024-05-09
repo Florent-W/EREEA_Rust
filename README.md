@@ -80,3 +80,44 @@ some function have a high cyclomatic complexity.
 The game is not very pretty, there is sound, there is also a bug on the return of the robot.
 
 Archi is basic but clean.
+
+SUmmary :
+
+ project     : EREEA_Rust
+ repo age    : 2 months 
+ branch:     : review
+ last active : 9 seconds ago
+ active on   : 14 days
+ commits     : 78
+ files       : 41
+ uncommitted :        0
+ authors     : 
+    56  Florent-W      71.8%
+     6  dantin-durand  7.7%
+     4  WilliamGR-dev  5.1%
+     3  Groot          3.8%
+     3  Swann HERRERA  3.8%
+     2  Abdou365       2.6%
+     2  Axel Gourdin   2.6%
+     2  gourdinax      2.6%
+
+ project     : EREEA_Rust
+ lines       :     8326
+ authors     :
+6917 Florent-W      83.1%
+ 745 Groot          8.9%
+ 497 Swann HERRERA  6.0%
+ 155 gourdinax      1.9%
+   7 dantin-durand  0.1%
+   5 Abdou365       0.1%
+
+ Language            Files        Lines         Code     Comments       Blanks
+===============================================================================
+ Markdown                5          243            0          181           62
+ TOML                    1           22           17            1            4
+-------------------------------------------------------------------------------
+ Rust                   16         1984         1192          652          140
+ |- Markdown             1            2            0            2            0
+ (Total)                           1986         1192          654          140
+===============================================================================
+ Total                  22         2249         1209          834          206
