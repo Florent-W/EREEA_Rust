@@ -66,14 +66,17 @@ enum TextureOrColor {
 }
 
 /***
+ * This method is a bit complexe
  * Fonction pour charger la map
  */
+/// You should try this kind of comment.
 pub fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     seed_res: Res<SeedResource>,
     size_map_res: Res<SizeMap>,
 ) {
+    //! or this one it's named rustdocs.
     // Charger les textures pour les différents éléments de la carte
     let energie_texture_handle = asset_server.load(ENERGIE_SPRITE);
     let mineral_texture_handle = asset_server.load(MINERAL_SPRITE);

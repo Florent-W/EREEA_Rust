@@ -52,3 +52,31 @@ Une légende est également indiqué à gauche de la carte.
 - Les robots Explorateur vont parcourir la carte, en revenant à la base, ils enregistrent leur progression, dévoilant petit à petit la carte. 
 - Les robots collecteurs vont pouvoir collecter les ressources qui vont permettre de créer des nouveaux robots à la base. Le type du robot à la création est désigné au hasard. 
 - Les robots ont également plusieurs états : Quand ils sont à la base, ils vont calculer une position au hasard sur la carte qui n'a pas encore été déverouillée, ils vont essayer de ne pas rencontrer d'obstacles et une fois la cible atteinte, ils vont revenir à la base où ils attendront 5 secondes avant de repartir vers une nouvelle cible.
+
+---
+
+Cargo fmt && cargo clippy....
+
+code with inconsicency in language.
+
+a lot of test in comment.
+
+Some test.
+
+Integration test more than unit test.
+
+Magic number, underuse of matches.
+
+presence of changelog. (I feel like it's in revese order)
+
+few dependency. but could make some optimisation of the build.
+
+lake of builder and factory methods
+
+wrong use of comment.
+
+some function have a high cyclomatic complexity.
+
+The game is not very pretty, there is sound, there is also a bug on the return of the robot.
+
+Archi is basic but clean.

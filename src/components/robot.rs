@@ -183,6 +183,7 @@ pub fn move_robots_on_map_system(
                 }
             }
             RobotState::Returning => {
+                // No verification check for come back at base
                 // Logique pour le retour à la base en bouclant autour de la carte
                 if robot.timer <= 0.0 {
                     if *position != *base_pos {
