@@ -1,50 +1,55 @@
 #[cfg(test)]
 mod tests {
-    use bevy::prelude::*;
     use bevy::app::App;
-    use ereea::{components::AffichageCasesNonDecouvertes, systems::{setup_ui, toggle_cases_non_decouvertes}};
+    use bevy::prelude::*;
+    use ereea::{
+        components::AffichageCasesNonDecouvertes,
+        systems::{setup_ui, toggle_cases_non_decouvertes},
+    };
 
-/***
- * Test pour les systèmes de UI
- */
-#[test]
-fn test_setup_ui() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(AssetPlugin::default());
-    app.init_asset::<Font>();
+    /***
+     * Test pour les systèmes de UI
+     */
+    #[test]
+    fn test_setup_ui() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(AssetPlugin::default());
+        app.init_asset::<Font>();
 
-    app.add_systems(Startup, setup_ui);
+        app.add_systems(Startup, setup_ui);
 
-    app.update();
-    
-    let mut text_query = app.world.query::<&Text>();
-    assert!(text_query.iter(&app.world).count() > 0); 
-}
+        app.update();
 
-/***
- * Test pour le système de basculement de l'affichage du mode découverte
- */
-#[test]
-fn test_toggle_cases_non_decouvertes() {
-    let mut app = App::new();
-    app.insert_resource(AffichageCasesNonDecouvertes(false));
-    app.insert_resource(ButtonInput::<KeyCode>::default());
-    app.add_systems(Update, toggle_cases_non_decouvertes);
+        let mut text_query = app.world.query::<&Text>();
+        assert!(text_query.iter(&app.world).count() > 0);
+    }
 
-    app.world.resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::Tab);
-    app.update();
+    /***
+     * Test pour le système de basculement de l'affichage du mode découverte
+     */
+    #[test]
+    fn test_toggle_cases_non_decouvertes() {
+        let mut app = App::new();
+        app.insert_resource(AffichageCasesNonDecouvertes(false));
+        app.insert_resource(ButtonInput::<KeyCode>::default());
+        app.add_systems(Update, toggle_cases_non_decouvertes);
 
-    // Vérifier si l'état a été basculé
-    let affichage = app.world.resource::<AffichageCasesNonDecouvertes>();
-    assert_eq!(affichage.0, true);  
+        app.world
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Tab);
+        app.update();
+
+        // Vérifier si l'état a été basculé
+        let affichage = app.world.resource::<AffichageCasesNonDecouvertes>();
+        assert_eq!(affichage.0, true);
     }
 }
 
 /* TODO Finir les tests
 /***
  * Test pour le système de déplacement de la caméra
- 
+
  */
 #[test]
 fn test_camera_initialization() {
@@ -58,7 +63,7 @@ fn test_camera_initialization() {
         app.update();
 
         app.add_systems(Startup, setup_map);
-        app.update(); 
+        app.update();
 
     // On regarde il y a combien d'entité qui ont des composants camera
     let camera_count = app.world.query::<&Camera2d>().iter(&app.world).count();

@@ -1,8 +1,8 @@
+use crate::components::SeedResource;
+use crate::systems::camera::setup_camera;
 use bevy::prelude::*;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
-use crate::systems::camera::setup_camera;
-use crate::components::SeedResource;
 
 use super::{BorduresActive, Ressource, SizeMap};
 
@@ -20,8 +20,8 @@ pub struct Carte {
 
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
 pub struct Position {
-   pub x: i32,
-   pub y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 
 #[derive(Component, Debug)]
@@ -68,7 +68,12 @@ enum TextureOrColor {
 /***
  * Fonction pour charger la map
  */
-pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_res: Res<SeedResource>, size_map_res: Res<SizeMap>) {
+pub fn setup_map(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    seed_res: Res<SeedResource>,
+    size_map_res: Res<SizeMap>,
+) {
     // Charger les textures pour les différents éléments de la carte
     let energie_texture_handle = asset_server.load(ENERGIE_SPRITE);
     let mineral_texture_handle = asset_server.load(MINERAL_SPRITE);
@@ -77,8 +82,8 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
     let obstacle_handle = asset_server.load(OBSTACLE_SPRITE);
 
     // Dimensions de la carte
-    let largeur = size_map_res.length.unwrap_or(50); 
-    let hauteur = size_map_res.height.unwrap_or(50);  
+    let largeur = size_map_res.length.unwrap_or(50);
+    let hauteur = size_map_res.height.unwrap_or(50);
 
     // Créer l'entité de la carte avec sa position de base
     commands.spawn((Carte { largeur, hauteur }, Position { x: 0, y: 0 }));
@@ -103,55 +108,101 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
 
             // Déterminer quel élément géographique générer en fonction de la valeur du bruit
             let (element_geo, texture_or_color_geo, taille_geo) = if noise_normalised >= 0.8 {
-                    (ElementMap::ElementGeographique(ElementGeographique::Montagne), TextureOrColor::Color(Color::rgb(0.8, 0.8, 0.8)), 1.0)
-            }
-            else if noise_normalised >= 0.6 {
-                (ElementMap::ElementGeographique(ElementGeographique::Herbe), TextureOrColor::Color(Color::rgb(0.5, 0.75, 0.3)), 1.0)
+                (
+                    ElementMap::ElementGeographique(ElementGeographique::Montagne),
+                    TextureOrColor::Color(Color::rgb(0.8, 0.8, 0.8)),
+                    1.0,
+                )
+            } else if noise_normalised >= 0.6 {
+                (
+                    ElementMap::ElementGeographique(ElementGeographique::Herbe),
+                    TextureOrColor::Color(Color::rgb(0.5, 0.75, 0.3)),
+                    1.0,
+                )
             } else if noise_normalised > 0.4 {
-                (ElementMap::ElementGeographique(ElementGeographique::Terre), TextureOrColor::Color(Color::rgb(0.69, 0.62, 0.541)), 1.0)
+                (
+                    ElementMap::ElementGeographique(ElementGeographique::Terre),
+                    TextureOrColor::Color(Color::rgb(0.69, 0.62, 0.541)),
+                    1.0,
+                )
             } else if noise_normalised > 0.2 {
-                (ElementMap::ElementGeographique(ElementGeographique::Sable), TextureOrColor::Color(Color::rgb(0.76, 0.69, 0.5)), 1.0)
+                (
+                    ElementMap::ElementGeographique(ElementGeographique::Sable),
+                    TextureOrColor::Color(Color::rgb(0.76, 0.69, 0.5)),
+                    1.0,
+                )
             } else {
-                (ElementMap::ElementGeographique(ElementGeographique::Eau), TextureOrColor::Color(Color::rgb(0.4, 0.5, 0.8)), 1.0)
+                (
+                    ElementMap::ElementGeographique(ElementGeographique::Eau),
+                    TextureOrColor::Color(Color::rgb(0.4, 0.5, 0.8)),
+                    1.0,
+                )
             };
 
             let sprite_bundle_geo = SpriteBundle {
-                sprite: Sprite { color: match texture_or_color_geo {
-                    TextureOrColor::Color(color) => color,
-                    _ => Color::WHITE
-                }, ..Default::default() },
-                transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0)).with_scale(Vec3::splat(taille_geo)),
+                sprite: Sprite {
+                    color: match texture_or_color_geo {
+                        TextureOrColor::Color(color) => color,
+                        _ => Color::WHITE,
+                    },
+                    ..Default::default()
+                },
+                transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.0))
+                    .with_scale(Vec3::splat(taille_geo)),
                 ..Default::default()
             };
 
-            commands.spawn(sprite_bundle_geo).insert(ElementCarte {
-                element: element_geo,
-                est_decouvert: EtatDecouverte::NonDecouvert,
-                decouvert_robot_id: None,
-            }).insert(position.clone());
+            commands
+                .spawn(sprite_bundle_geo)
+                .insert(ElementCarte {
+                    element: element_geo,
+                    est_decouvert: EtatDecouverte::NonDecouvert,
+                    decouvert_robot_id: None,
+                })
+                .insert(position.clone());
 
             // Ajout des ressources
             if let Some((element_res, texture_or_color_res, taille_res)) = match noise_normalised {
-                n if n > 0.8 => Some((ElementMap::Ressource(Ressource::Obstacle), TextureOrColor::Texture(obstacle_handle.clone()), 0.0015)),
-                n if n > 0.75 => Some((ElementMap::Ressource(Ressource::Energie), TextureOrColor::Texture(energie_texture_handle.clone()), 0.0015)),
-                n if n > 0.72 => Some((ElementMap::Ressource(Ressource::Mineral), TextureOrColor::Texture(mineral_texture_handle.clone()), 0.0012)),
-                n if n > 0.7 => Some((ElementMap::Ressource(Ressource::LieuInteretScientifique), TextureOrColor::Texture(lieu_interet_texture_handle.clone()), 0.0015)),
+                n if n > 0.8 => Some((
+                    ElementMap::Ressource(Ressource::Obstacle),
+                    TextureOrColor::Texture(obstacle_handle.clone()),
+                    0.0015,
+                )),
+                n if n > 0.75 => Some((
+                    ElementMap::Ressource(Ressource::Energie),
+                    TextureOrColor::Texture(energie_texture_handle.clone()),
+                    0.0015,
+                )),
+                n if n > 0.72 => Some((
+                    ElementMap::Ressource(Ressource::Mineral),
+                    TextureOrColor::Texture(mineral_texture_handle.clone()),
+                    0.0012,
+                )),
+                n if n > 0.7 => Some((
+                    ElementMap::Ressource(Ressource::LieuInteretScientifique),
+                    TextureOrColor::Texture(lieu_interet_texture_handle.clone()),
+                    0.0015,
+                )),
                 _ => None,
             } {
                 let sprite_bundle_res = SpriteBundle {
                     texture: match texture_or_color_res {
                         TextureOrColor::Texture(texture_handle) => texture_handle,
-                        _ => continue, 
+                        _ => continue,
                     },
-                    transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.1)).with_scale(Vec3::splat(taille_res)),
+                    transform: Transform::from_translation(Vec3::new(x as f32, y as f32, 0.1))
+                        .with_scale(Vec3::splat(taille_res)),
                     ..Default::default()
                 };
 
-                commands.spawn(sprite_bundle_res).insert(ElementCarte {
-                    element: element_res,
-                    est_decouvert: EtatDecouverte::NonDecouvert,
-                    decouvert_robot_id: None,
-                }).insert(position.clone());
+                commands
+                    .spawn(sprite_bundle_res)
+                    .insert(ElementCarte {
+                        element: element_res,
+                        est_decouvert: EtatDecouverte::NonDecouvert,
+                        decouvert_robot_id: None,
+                    })
+                    .insert(position.clone());
             }
         }
     }
@@ -168,7 +219,7 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
         let noise_normalised = (noise_value + 1.0) / 2.0;
 
         // Vérifie si la position n'est pas un obstacle
-        if  noise_normalised >= 0.2 && noise_normalised <= 0.5 {
+        if noise_normalised >= 0.2 && noise_normalised <= 0.5 {
             break;
         }
     }
@@ -194,48 +245,56 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, seed_re
 /***
 * Fonction pour ajouter les bordures
 */
-pub fn setup_bordures(mut commands: Commands, query: Query<(&Carte, &Position)>, bordures_active: ResMut<BorduresActive>) {
+pub fn setup_bordures(
+    mut commands: Commands,
+    query: Query<(&Carte, &Position)>,
+    bordures_active: ResMut<BorduresActive>,
+) {
     if !bordures_active.0 {
         return;
     }
 
-   for (carte, carte_position) in query.iter() {
-       let bordure_couleur = Color::BLACK;
-       let epaisseur_bordure = 0.05;
-       let taille_case = 1.0;
-       for y in 0..carte.hauteur {
-           for x in 0..carte.largeur {
-               let x_pos = x as f32 + carte_position.x as f32 * taille_case;
-               let y_pos = y as f32 + carte_position.y as f32 * taille_case;
+    for (carte, carte_position) in query.iter() {
+        let bordure_couleur = Color::BLACK;
+        let epaisseur_bordure = 0.05;
+        let taille_case = 1.0;
+        for y in 0..carte.hauteur {
+            for x in 0..carte.largeur {
+                let x_pos = x as f32 + carte_position.x as f32 * taille_case;
+                let y_pos = y as f32 + carte_position.y as f32 * taille_case;
 
-               // Créer les bordures verticales
-               if x < carte.largeur - 1 {
-                   commands.spawn(SpriteBundle {
-                       sprite: Sprite {
-                           color: bordure_couleur,
-                           custom_size: Some(Vec2::new(epaisseur_bordure, taille_case)),
-                           ..Default::default()
-                       },
-                       transform: Transform::from_xyz(x_pos + 0.5 * taille_case, y_pos, 2.0),
-                       visibility: Visibility::Visible,
-                       ..Default::default()
-                   }).insert(Bordure);
-               }
+                // Créer les bordures verticales
+                if x < carte.largeur - 1 {
+                    commands
+                        .spawn(SpriteBundle {
+                            sprite: Sprite {
+                                color: bordure_couleur,
+                                custom_size: Some(Vec2::new(epaisseur_bordure, taille_case)),
+                                ..Default::default()
+                            },
+                            transform: Transform::from_xyz(x_pos + 0.5 * taille_case, y_pos, 2.0),
+                            visibility: Visibility::Visible,
+                            ..Default::default()
+                        })
+                        .insert(Bordure);
+                }
 
-               // Créer les bordures horizontales
-               if y < carte.hauteur - 1 {
-                   commands.spawn(SpriteBundle {
-                       sprite: Sprite {
-                           color: bordure_couleur,
-                           custom_size: Some(Vec2::new(taille_case, epaisseur_bordure)),
-                           ..Default::default()
-                       },
-                       transform: Transform::from_xyz(x_pos, y_pos + 0.5 * taille_case, 2.0),
-                       visibility: Visibility::Visible,
-                       ..Default::default()
-                   }).insert(Bordure);
-               }
-           }
-       }
-   }
+                // Créer les bordures horizontales
+                if y < carte.hauteur - 1 {
+                    commands
+                        .spawn(SpriteBundle {
+                            sprite: Sprite {
+                                color: bordure_couleur,
+                                custom_size: Some(Vec2::new(taille_case, epaisseur_bordure)),
+                                ..Default::default()
+                            },
+                            transform: Transform::from_xyz(x_pos, y_pos + 0.5 * taille_case, 2.0),
+                            visibility: Visibility::Visible,
+                            ..Default::default()
+                        })
+                        .insert(Bordure);
+                }
+            }
+        }
+    }
 }

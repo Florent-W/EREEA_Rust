@@ -1,9 +1,9 @@
 use crate::components::VitesseGlobale;
-use crate::systems::update_text;
-use bevy_kira_audio::prelude::*;
-use bevy::prelude::*;
-use rand::Rng;
 use crate::systems::audio::encaissement_audio;
+use crate::systems::update_text;
+use bevy::prelude::*;
+use bevy_kira_audio::prelude::*;
+use rand::Rng;
 
 use super::{
     Base, Carte, Compteur, ElementCarte, ElementMap, EtatDecouverte, Position, Ressource, SizeMap,
@@ -41,7 +41,7 @@ pub struct Robot {
 /***
  * Fonction d'ajout des robots sur la carte
  */
-pub fn spawn_robots (
+pub fn spawn_robots(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     base_query: Query<(&Base, &Position)>,
@@ -65,41 +65,47 @@ pub fn spawn_robots (
             };
 
             let robot_name = format!("{:?}{}", type_robot, robot_id);
-            
+
             // Cible aléatoire sur la map pour les robots
-            let target_x = rand::thread_rng().gen_range(0..size_map_res.length.unwrap_or(50)) as i32;
-            let target_y = rand::thread_rng().gen_range(0..size_map_res.height.unwrap_or(50)) as i32;
+            let target_x =
+                rand::thread_rng().gen_range(0..size_map_res.length.unwrap_or(50)) as i32;
+            let target_y =
+                rand::thread_rng().gen_range(0..size_map_res.height.unwrap_or(50)) as i32;
             let timer = 5.0 / (vitesse * vitesse_globale.vitesse) as f32;
 
-            commands.spawn(SpriteBundle {
-                texture: robot_texture_handle,
-                sprite: Sprite {
-                    color: color.unwrap_or(Color::WHITE),
+            commands
+                .spawn(SpriteBundle {
+                    texture: robot_texture_handle,
+                    sprite: Sprite {
+                        color: color.unwrap_or(Color::WHITE),
+                        ..Default::default()
+                    },
+                    transform: Transform::from_translation(Vec3::new(
+                        base_position.x as f32,
+                        base_position.y as f32,
+                        1.0,
+                    ))
+                    .with_scale(Vec3::splat(0.003)),
                     ..Default::default()
-                },
-                transform: Transform::from_translation(Vec3::new(
-                    base_position.x as f32,
-                    base_position.y as f32,
-                    1.0,
-                ))
-                .with_scale(Vec3::splat(0.003)),
-                ..Default::default()
-            }).insert(Robot {
-                id: robot_id,
-                nom: robot_name,
-                pv_max: 100,
-                type_robot: type_robot,
-                vitesse: vitesse,
-                timer: timer,
-                target_position: Some(Position {
-                    x: target_x,
-                    y: target_y,
-                }),
-                steps_moved: 0,
-            }).insert(Position {
-                x: base_position.x,
-                y: base_position.y,
-            }).insert(RobotState::AtBase);
+                })
+                .insert(Robot {
+                    id: robot_id,
+                    nom: robot_name,
+                    pv_max: 100,
+                    type_robot: type_robot,
+                    vitesse: vitesse,
+                    timer: timer,
+                    target_position: Some(Position {
+                        x: target_x,
+                        y: target_y,
+                    }),
+                    steps_moved: 0,
+                })
+                .insert(Position {
+                    x: base_position.x,
+                    y: base_position.y,
+                })
+                .insert(RobotState::AtBase);
         }
     } else {
         eprintln!("Pas de base trouvée donc le robot ne peut pas être créé.");
@@ -118,7 +124,7 @@ pub fn move_robots_on_map_system(
         &mut RobotState,
     )>,
     carte_query: Query<&Carte>,
-    base_query: Query<(&Base, &Position), Without<Robot>>, 
+    base_query: Query<(&Base, &Position), Without<Robot>>,
     element_carte_query: Query<(&ElementCarte, &Position), Without<Robot>>,
     time: Res<Time>,
     vitesse_globale: Res<VitesseGlobale>,
@@ -138,13 +144,22 @@ pub fn move_robots_on_map_system(
                             // Calculer la direction de déplacement et ajuster pour bouclage
                             let dx = (target_position.x - position.x).signum();
                             let dy = (target_position.y - position.y).signum();
-                            let next_x = (position.x + dx + carte.largeur as i32) % carte.largeur as i32;
-                            let next_y = (position.y + dy + carte.hauteur as i32) % carte.hauteur as i32;
-                            let next_position = Position { x: next_x, y: next_y };
+                            let next_x =
+                                (position.x + dx + carte.largeur as i32) % carte.largeur as i32;
+                            let next_y =
+                                (position.y + dy + carte.hauteur as i32) % carte.hauteur as i32;
+                            let next_position = Position {
+                                x: next_x,
+                                y: next_y,
+                            };
 
                             // Vérification les obstacles avant de se déplacer
                             if element_carte_query.iter().any(|(elem, pos)| {
-                                *pos == next_position && matches!(elem.element, ElementMap::Ressource(Ressource::Obstacle))
+                                *pos == next_position
+                                    && matches!(
+                                        elem.element,
+                                        ElementMap::Ressource(Ressource::Obstacle)
+                                    )
                             }) {
                                 // Changer la cible si un obstacle est trouvé
                                 robot.target_position = Some(Position {
@@ -173,8 +188,10 @@ pub fn move_robots_on_map_system(
                     if *position != *base_pos {
                         let dx = (base_pos.x - position.x).signum();
                         let dy = (base_pos.y - position.y).signum();
-                        position.x = (position.x + dx + carte.largeur as i32) % carte.largeur as i32;
-                        position.y = (position.y + dy + carte.hauteur as i32) % carte.hauteur as i32;
+                        position.x =
+                            (position.x + dx + carte.largeur as i32) % carte.largeur as i32;
+                        position.y =
+                            (position.y + dy + carte.hauteur as i32) % carte.hauteur as i32;
                     } else {
                         *state = RobotState::AtBase;
                         robot.timer = 5.0; // Attente à la base
@@ -274,7 +291,6 @@ pub fn collect_resources_system(
                     if element_carte.est_decouvert == EtatDecouverte::NonDecouvert {
                         element_carte.decouvert_robot_id = Some(robot.id);
                         element_carte.est_decouvert = EtatDecouverte::EnAttente;
-
                     }
                 }
             }
@@ -325,7 +341,7 @@ pub fn assign_targets(
  * Fonction qui découvre les cases lorsqu'un robot est à la base
  */
 pub fn discover_elements(
-    robot_query: Query<(&Robot, &RobotState)>, 
+    robot_query: Query<(&Robot, &RobotState)>,
     mut elements_query: Query<(&mut ElementCarte, &Position)>,
 ) {
     // On met à jour quand les robots sont à la base
@@ -333,7 +349,9 @@ pub fn discover_elements(
         if matches!(state, RobotState::AtBase) {
             // On regarde si c'est le robot qui est dans la base qui a découvert la case
             for (mut element_carte, _) in elements_query.iter_mut() {
-                if element_carte.est_decouvert == EtatDecouverte::EnAttente && element_carte.decouvert_robot_id == Some(robot.id) {
+                if element_carte.est_decouvert == EtatDecouverte::EnAttente
+                    && element_carte.decouvert_robot_id == Some(robot.id)
+                {
                     element_carte.est_decouvert = EtatDecouverte::Decouvert;
                 }
             }

@@ -1,7 +1,7 @@
-use bevy::prelude::*;
-use ereea::components::{Position, Robot, TypeRobot};
-use ereea::components::{setup_map, Carte, ElementCarte};
 use bevy::app::App;
+use bevy::prelude::*;
+use ereea::components::{setup_map, Carte, ElementCarte};
+use ereea::components::{Position, Robot, TypeRobot};
 
 /***
  * Test de la map
@@ -84,7 +84,7 @@ mod tests {
 
         app.add_systems(Startup, setup_map);
         app.add_systems(Startup, assert_map_system);
-        app.update(); 
+        app.update();
     }
 
     #[test]
@@ -94,17 +94,21 @@ mod tests {
         app.add_plugins(AssetPlugin::default());
         app.world.insert_resource(BorduresActive(true));
 
-        app.world.spawn(SpriteBundle {
-            sprite: Sprite {
-                color: Color::BLACK,
-                custom_size: Some(Vec2::new(0.05, 1.0)), 
+        app.world
+            .spawn(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::BLACK,
+                    custom_size: Some(Vec2::new(0.05, 1.0)),
+                    ..default()
+                },
+                transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 ..default()
-            },
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            ..default()
-        })
-        .insert(Carte { largeur: 3, hauteur: 3 })
-        .insert(Position { x: 0, y: 0 });
+            })
+            .insert(Carte {
+                largeur: 3,
+                hauteur: 3,
+            })
+            .insert(Position { x: 0, y: 0 });
         app.add_systems(Startup, setup_bordures);
 
         app.update();
@@ -118,7 +122,7 @@ mod tests {
 }
 
 // TODO Finir les tests
-/* 
+/*
     #[test]
     fn test_start_audio() {
         let mut app = App::new();
@@ -131,7 +135,7 @@ mod tests {
 
         // Charger un fichier audio pour le test
         let music_handle: Handle<AudioSource> = asset_server.load("audio/music.ogg");
-        
+
         // Appeler la fonction pour démarrer l'audio
         audio.play(music_handle.clone()).looped();
 
@@ -265,7 +269,7 @@ mod tests3 {
         app.add_startup_system_to_stage(StartupStage::Startup, |mut commands: Commands| {
             commands.spawn().insert(Base).insert(Position { x: 5, y: 5 });
         });
-        
+
         app.update();
 
         let robot_query = app.world.query::<&Robot>();
@@ -281,7 +285,7 @@ mod tests3 {
         app.add_plugins(DefaultPlugins);
         app.insert_resource(Time::default());
         app.insert_resource(VitesseGlobale { vitesse: 1 });
-        
+
         app.add_startup_system_to_stage(StartupStage::Startup, |mut commands: Commands| {
             commands.spawn().insert(Carte { largeur: 100, hauteur: 100 });
             commands.spawn().insert(Base).insert(Position { x: 0, y: 0 });
@@ -299,7 +303,7 @@ mod tests3 {
     fn test_collect_resources_system() {
         let mut app = App::new();
         app.add_plugins(DefaultPlugins);
-        
+
         app.add_startup_system_to_stage(StartupStage::Startup, |mut commands: Commands| {
             commands.spawn().insert(ElementCarte {
                 element: ElementMap::Ressource(Ressource::Energie),
