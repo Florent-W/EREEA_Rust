@@ -158,7 +158,7 @@ pub fn request_resolution_from_user() -> (f32, f32) {
                 .read_line(&mut custom_input)
                 .expect("Erreur dans la lecture de la ligne");
 
-            let parts: Vec<&str> = custom_input.trim().split_whitespace().collect();
+            let parts: Vec<&str> = custom_input.split_whitespace().collect();
             if parts.len() == 2 {
                 if let (Ok(width), Ok(height)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>())
                 {

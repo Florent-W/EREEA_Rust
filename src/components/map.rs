@@ -159,7 +159,7 @@ pub fn setup_map(
                     est_decouvert: EtatDecouverte::NonDecouvert,
                     decouvert_robot_id: None,
                 })
-                .insert(position.clone());
+                .insert(position);
 
             // Ajout des ressources
             if let Some((element_res, texture_or_color_res, taille_res)) = match noise_normalised {
@@ -202,7 +202,7 @@ pub fn setup_map(
                         est_decouvert: EtatDecouverte::NonDecouvert,
                         decouvert_robot_id: None,
                     })
-                    .insert(position.clone());
+                    .insert(position);
             }
         }
     }
@@ -219,7 +219,7 @@ pub fn setup_map(
         let noise_normalised = (noise_value + 1.0) / 2.0;
 
         // Vérifie si la position n'est pas un obstacle
-        if noise_normalised >= 0.2 && noise_normalised <= 0.5 {
+        if (0.2..=0.5).contains(&noise_normalised) {
             break;
         }
     }

@@ -32,7 +32,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(AudioPlugin::default())
+        .add_plugins(AudioPlugin)
         .add_systems(PreStartup, start_audio)
         .insert_resource(ClearColor(Color::rgb(0.5, 0.5, 0.5)))
         .insert_resource(AffichageCasesNonDecouvertes(false))

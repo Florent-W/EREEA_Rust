@@ -112,7 +112,7 @@ pub fn setup_legend(
 ) {
     let legend_texture_handle = asset_server.load("legende.png");
 
-    if let Some(_window) = windows.get_single_mut().ok() {
+    if let Ok(_window) = windows.get_single_mut() {
         commands.spawn(SpriteBundle {
             texture: legend_texture_handle,
             transform: Transform::from_xyz(-5.0, 30.0, 0.0).with_scale(Vec3::splat(0.01)),

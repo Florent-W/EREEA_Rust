@@ -92,9 +92,9 @@ pub fn spawn_robots(
                     id: robot_id,
                     nom: robot_name,
                     pv_max: 100,
-                    type_robot: type_robot,
-                    vitesse: vitesse,
-                    timer: timer,
+                    type_robot,
+                    vitesse,
+                    timer,
                     target_position: Some(Position {
                         x: target_x,
                         y: target_y,

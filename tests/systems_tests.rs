@@ -42,7 +42,7 @@ mod tests {
 
         // Vérifier si l'état a été basculé
         let affichage = app.world.resource::<AffichageCasesNonDecouvertes>();
-        assert_eq!(affichage.0, true);
+        assert!(affichage.0);
     }
 }
 
