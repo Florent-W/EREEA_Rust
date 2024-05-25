@@ -69,6 +69,8 @@ Magic number, underuse of matches.
 
 presence of changelog. (I feel like it's in revese order)
 
+ADR (in french).
+
 few dependency. but could make some optimisation of the build.
 
 lake of builder and factory methods
@@ -80,6 +82,9 @@ some function have a high cyclomatic complexity.
 The game is not very pretty, there is sound, there is also a bug on the return of the robot.
 
 Archi is basic but clean.
+
+I think the ARD 3 is not well explain / suited. You should take position about `dyn` implementation and enum wrapper.
+
 
 SUmmary :
 
